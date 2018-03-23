@@ -5,7 +5,7 @@ Use XBee based wireless DooM D3vices with https://github.com/doomsquadairsoft/co
 
 ## Hardware Setup
 
-This project requires a linux computer with WiFi and XBee radios. Use a USB XBee dongle such as https://www.adafruit.com/product/247. Currently only ZigBee XBee radios in API mode are suported, however other series may be included in the future.
+This project requires a [linux computer](http://amzn.to/2HXWCA8) with WiFi and XBee radios. Use a [USB XBee dongle](https://www.amazon.com/Adafruit-USB-XBee-Adapter-ADA247/dp/B01BMREBAO/ref=sr_1_2?s=electronics&ie=UTF8&qid=1521779953&sr=1-2&keywords=adafruit+xbee+adapter&dpID=51dk7kZ12XL&preST=_SX300_QL70_&dpSrc=srch). Currently only ZigBee XBee radios in API mode are suported, however other series may be included in the future.
 
 ## Installation
 
