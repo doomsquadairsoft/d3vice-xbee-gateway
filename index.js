@@ -13,8 +13,49 @@
 
 "use strict";
 
+const feathers = require('@feathersjs/feathers');
+const socketio = require('@feathersjs/socketio-client');
+const io = require('socket.io-client');
 var rx = require("rx");
 var xbeeRx = require("xbee-rx");
+var validUrl = require('valid-url');
+
+
+
+
+const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
+console.log(gameServerAddress)
+
+if (typeof gameServerAddress === 'undefined')
+    throw new Error('D3VICE_GAMESERVER_ADDRESS is undefined in environment!');
+
+
+if (validUrl.isUri(gameServerAddress)){
+    console.log('Looks like an URI');
+} else {
+    throw new Error('D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. '+
+    'Example: http://game.doomsquadairsoft.com or http://192.168.1.112')
+}
+
+
+const socket = io(gameServerAddress); // @TODO dynamically set this
+const app = feathers();
+
+// Set up Socket.io client with the socket
+app.configure(socketio(socket));
+
+// Receive real-time events through Socket.io
+app.service('devices')
+    .on('created', device => console.log('New device created', device));
+
+// Call the `messages` service
+app.service('device').create({
+    did: 'franchez-kka',
+    controllingTeam: 1
+});
+
+
+
 
 var xbee = xbeeRx({
     serialport: "/dev/ttyUSB0",
