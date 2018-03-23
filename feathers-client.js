@@ -1,21 +1,3 @@
-/*jslint node:true */
-
-/*
- * examples/simple-monitor.js
- * https://github.com/101100/xbee-rx
- *
- * Simple example showing how to monitor incoming transmissions and how
- * to clean up on CTRL-C.
- *
- * Copyright (c) 2015-2016 Jason Heard
- * Licensed under the MIT license.
- */
-
-"use strict";
-
-//const xbee = require('./xbee');
-//const feathers = require('./feathers-client')
-
 
 const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
@@ -48,17 +30,13 @@ app.configure(socketio(socket));
 
 // Receive real-time events through Socket.io
 app.service('devices')
-    .on('created', function (device) {
-        console.log('New device created', device);
-    })
+    .on('created', device => console.log('New device created', device));
 
-
-// Get the list of devices that exist on the gameserver
-app.service('devices').find().then(function(devices) {
-    console.log(devices);
+// Call the `messages` service
+app.service('device').create({
+    did: 'franchez-kka',
+    controllingTeam: 1
 });
-
-// when a device is added, u
 
 //export default feathersClient
 
