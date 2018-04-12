@@ -13,8 +13,7 @@
 
 "use strict";
 
-//const xbee = require('./xbee');
-//const feathers = require('./feathers-client')
+const xbee = require('./xbee');
 
 
 const feathers = require('@feathersjs/feathers');
@@ -27,10 +26,16 @@ const validUrl = require('valid-url');
 const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
 console.log(gameServerAddress)
 
+/**
+ * Ensure game server address is defined
+ */
 if (typeof gameServerAddress === 'undefined')
     throw new Error('D3VICE_GAMESERVER_ADDRESS is undefined in environment!');
 
 
+/**
+ * Ensure game server address is a valid URI
+ */
 if (validUrl.isUri(gameServerAddress)){
     console.log('Looks like a URI');
 } else {
@@ -39,22 +44,43 @@ if (validUrl.isUri(gameServerAddress)){
 }
 
 
-const socket = io(gameServerAddress); // @TODO dynamically set this
+
+const socket = io(gameServerAddress); // @TODO dynamically set this using Bonjour or something
 const app = feathers();
 
-// Set up Socket.io client with the socket
+/**
+ * Set up Socket.io client with the socket to gameServerAddress
+ */
 app.configure(socketio(socket));
 
+<<<<<<< HEAD
 // get a handle on the event service
 const evs = app.service('events');
 
 // Receive real-time events through Socket.io
+=======
+
+/**
+ * Receive real-time events through Socket.io.
+ *
+ * When a D3VICE state changes, broadcast to the XBee network
+ */
+>>>>>>> 0b92655912574ef741534eb57d34542beb1939da
 app.service('devices')
     .on('created', function (device) {
         console.log('New device created', device);
     })
+    .on('updated', function (device) {
+	console.log(`device ${device.did} has changed`)
+        console.log(device)
+    })
+    .on('patched', function(device) {
+        console.log(`device ${device.did} has patched`)
+        console.log(device)
+    })
 
 
+<<<<<<< HEAD
 
 // Get the list of devices that exist on the gameserver
 app.service('devices')
@@ -109,3 +135,11 @@ xbee.on('dcx') // d3vice-controlpoint-xbee
 // // feathersClient.service('/some/explicit/namespace').vuex({name: '/explicit/namespace'})
 //
 // export default feathersClient
+=======
+/**
+ * Get the list of devices that exist on the gameserver
+ */
+app.service('devices').find().then(function(devices) {
+    console.log(devices);
+});
+>>>>>>> 0b92655912574ef741534eb57d34542beb1939da
