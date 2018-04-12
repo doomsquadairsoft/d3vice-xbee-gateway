@@ -2,6 +2,10 @@
 
 Use XBee based wireless DooM D3vices with https://github.com/doomsquadairsoft/controlpointer
 
+## How it works
+
+  * d3vice-controlpoint-xbee sends a "[ZigBee Transmit Request (0x10)](https://www.safaribooksonline.com/library/view/building-wireless-sensor/780596807757/zigbee_transmit_request.html)" packet to the xbee broadcast address when it starts up.
+  * d3vice-xbee-gateway receives the above as a "[ZigBee Receive Packet (AO=0) (0x90)](https://www.safaribooksonline.com/library/view/building-wireless-sensor/780596807757/zigbee_receive_packet.html)" packet.
 
 ## Hardware Setup
 
@@ -16,3 +20,19 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 ## Running
 
     npm run start
+
+## Documentation
+
+### Wireless communication protocol
+
+#### Actions sent from d3vice-controlpoint-xbee
+
+* Button press
+* Button hold
+* Button release
+* Button double tap
+
+#### Actions sent from gateway
+
+* change light color
+* change light parameter

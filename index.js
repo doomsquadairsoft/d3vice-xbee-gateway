@@ -24,7 +24,6 @@ const validUrl = require('valid-url');
 
 
 
-
 const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
 console.log(gameServerAddress)
 
@@ -46,6 +45,9 @@ const app = feathers();
 // Set up Socket.io client with the socket
 app.configure(socketio(socket));
 
+// get a handle on the event service
+const evs = app.service('events');
+
 // Receive real-time events through Socket.io
 app.service('devices')
     .on('created', function (device) {
@@ -53,10 +55,24 @@ app.service('devices')
     })
 
 
+
 // Get the list of devices that exist on the gameserver
-app.service('devices').find().then(function(devices) {
-    console.log(devices);
-});
+app.service('devices')
+    .find()
+    .then(function(devices) {
+        console.log(devices);
+    });
+
+// When an event is received from the xbee network, translate the data
+// and forward to the gameserver.
+// @todo (this is pseudo-code)
+xbee.on('dcx') // d3vice-controlpoint-xbee
+    .then(function(data) {
+        evs.create({
+            type: data.type // ex: 'buttonPress'
+        })
+    })
+
 
 // when a device is added, u
 

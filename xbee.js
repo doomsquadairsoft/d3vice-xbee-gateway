@@ -46,4 +46,4 @@ module.exports = function() {
             xbee.close();
             process.exit();
         });
-}
+}()
