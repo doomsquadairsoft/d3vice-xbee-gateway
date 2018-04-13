@@ -22,7 +22,6 @@ const io = require('socket.io-client');
 const validUrl = require('valid-url');
 
 
-
 const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
 console.log(gameServerAddress)
 
@@ -53,19 +52,10 @@ const app = feathers();
  */
 app.configure(socketio(socket));
 
-<<<<<<< HEAD
 // get a handle on the event service
 const evs = app.service('events');
 
 // Receive real-time events through Socket.io
-=======
-
-/**
- * Receive real-time events through Socket.io.
- *
- * When a D3VICE state changes, broadcast to the XBee network
- */
->>>>>>> 0b92655912574ef741534eb57d34542beb1939da
 app.service('devices')
     .on('created', function (device) {
         console.log('New device created', device);
@@ -80,7 +70,6 @@ app.service('devices')
     })
 
 
-<<<<<<< HEAD
 
 // Get the list of devices that exist on the gameserver
 app.service('devices')
@@ -92,54 +81,11 @@ app.service('devices')
 // When an event is received from the xbee network, translate the data
 // and forward to the gameserver.
 // @todo (this is pseudo-code)
-xbee.on('dcx') // d3vice-controlpoint-xbee
-    .then(function(data) {
+xbee.helloStream
+    .takeUntil(xbee.ctrlCStream)
+    .subscribe(function (s) {
+        console.log(s);
         evs.create({
-            type: data.type // ex: 'buttonPress'
+            type: 'join' // ex: 'buttonPress'
         })
-    })
-
-
-// when a device is added, u
-
-//export default feathersClient
-
-
-//
-//
-// import feathers from '@feathersjs/feathers'
-// import socketio from 'feathers-socketio'
-// import auth from '@feathersjs/authentication-client'
-// import io from 'socket.io-client'
-// import feathersVuex from 'feathers-vuex'
-// import store from '../store/'
-//
-// const socket = io('http://localhost:3030', {transports: ['websocket']})
-//
-// const feathersClient = feathers()
-//   .configure(socketio(socket))
-//   //.configure(auth({ storage: window.localStorage }))
-//   //.configure(rx({idField: '_id'}))
-//   // .configure(feathersVuex(store, {
-//   //   idField: '_id',
-//   //   auth: {
-//   //     userService: '/users'
-//   //   }}))
-//
-//
-// feathersClient.service('/users')
-// feathersClient.service('/messages')
-// feathersClient.service('/devices')
-// // feathersClient.service('/todos').vuex({idField: '_id'})
-// // feathersClient.service('/deeply/nested/names')
-// // feathersClient.service('/some/explicit/namespace').vuex({name: '/explicit/namespace'})
-//
-// export default feathersClient
-=======
-/**
- * Get the list of devices that exist on the gameserver
- */
-app.service('devices').find().then(function(devices) {
-    console.log(devices);
-});
->>>>>>> 0b92655912574ef741534eb57d34542beb1939da
+    }, xbee.errorCb, xbee.exitCb);
