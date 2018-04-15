@@ -55,10 +55,24 @@ app.configure(socketio(socket));
 // get a handle on the event service
 const evs = app.service('events');
 
+evs.on('created', function (device) {
+    // idk
+});
+
 // Receive real-time events through Socket.io
 app.service('devices')
     .on('created', function (device) {
         console.log('New device created', device);
+        xbee.remoteTransmit({
+            destinationId: device.did,
+            broadcast: false,
+            data: 'DCXGA'
+        })
+        .subscribe(function xbeeTXSuccess () {
+            console.log("Transmission successful~");
+        }, function xbeeTXFail (e) {
+            console.log("Transmission failed:\n", e);
+        });
     })
     .on('updated', function (device) {
 	console.log(`device ${device.did} has changed`)
@@ -67,7 +81,7 @@ app.service('devices')
     .on('patched', function(device) {
         console.log(`device ${device.did} has patched`)
         console.log(`device: ${device}`)
-    })
+    });
 
 
 
@@ -80,12 +94,12 @@ app.service('devices')
 
 // When an event is received from the xbee network, translate the data
 // and forward to the gameserver.
-// @todo (this is pseudo-code)
 xbee.helloStream
     .takeUntil(xbee.ctrlCStream)
     .subscribe(function (s) {
         console.log(` helloStream: ${s}`);
-        // evs.create({
-        //     type: 'join' // ex: 'buttonPress'
-        // })
+        evs.create({
+            type: 'join', // ex: 'buttonPress'
+            origin: 'idk' // @todo get origin address64 somehow
+        });
     }, xbee.errorCb, xbee.exitCb);

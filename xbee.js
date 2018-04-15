@@ -8,7 +8,7 @@ const destinationId = '0013A20040B51A26';
 const data = 'TIESTO';
 
 
-module.exports.xbee = xbee = xbeeRx({
+module.exports = xbee = xbeeRx({
     serialport: "/dev/ttyUSB1",
     serialportOptions: {
         baudrate: 57600
@@ -49,14 +49,6 @@ module.exports.ctrlCStream = rx.Observable.fromEvent(stdin, "data")
     .where(R.is(String))
     .where(R.equals('DCXHI'));
 
-
-
-/**
- * take data off of the stream, processing it until something happens.
- *   - when data is seen, print it to stdout
- *   - when an error is observed, exit.
- *   - when Ctrl+C is observed, exit.
- */
 
 
 module.exports.errorCb = function (error) {
