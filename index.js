@@ -13,13 +13,81 @@
 
 "use strict";
 
-const xbee = require('./xbee');
 
 
 const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
 const io = require('socket.io-client');
 const validUrl = require('valid-url');
+const rx = require("rx");
+const xbeeRx = require("xbee-rx");
+const R = require("ramda");
+const xbee_api = require("xbee-api");
+
+
+const destinationId = '0013A20040B51A26';
+const data = 'TIESTO';
+
+
+var xbee = xbeeRx({
+    serialport: "/dev/ttyUSB4",
+    serialportOptions: {
+        baudrate: 57600
+    },
+    module: "ZigBee",
+    api_mode: 2,
+    debug: false
+});
+
+console.log("Monitoring incoming packets (press CTRL-C to stop)");
+
+var stdin = process.stdin;
+stdin.setRawMode(true);
+
+/**
+ * define the sequence of data that is a Ctrl+C
+ * we use this later to determine when to stop listening
+ * to the serial port
+ */
+var ctrlCStream = rx.Observable.fromEvent(stdin, "data")
+    .where(function monitorCtrlCOnData(data) {
+        return data.length === 1 && data[0] === 0x03; // Ctrl+C
+    })
+    .take(1);
+
+/**
+ * configure a stream for handling HELLOs from controlpoints
+ * the HELLO packet type is within type 144 (0x90) ZIGBEE_RECEIVE_PACKET
+ */
+var helloStream = xbee
+    .monitorTransmissions()
+    .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
+    .pluck("data")
+    .map(function (buffer) {
+        var s = buffer.toString();
+        return (s === "\r") ? "\n" : s;
+    })
+    .where(R.is(String))
+    .where(R.equals('DCXHI'));
+
+
+
+const errorCb = function (error) {
+    console.log("Error during monitoring:\n", error);
+    xbee.close();
+    process.exit();
+}
+
+
+const exitCb = function () {
+    console.log("\nGot CTRL-C; exiting.");
+    xbee.close();
+    process.exit();
+}
+
+
+
+
 
 
 const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
@@ -66,12 +134,12 @@ app.service('devices')
         xbee.remoteTransmit({
             destinationId: device.did,
             broadcast: false,
-            data: 'DCXGA'
+            data: 'DCXGA0' // Tell DCX to act GAME 0
         })
         .subscribe(function xbeeTXSuccess () {
-            console.log("Transmission successful~");
+            console.log("Device creation transmission successful~");
         }, function xbeeTXFail (e) {
-            console.log("Transmission failed:\n", e);
+            console.log("Device creation transmission failed:\n", e);
         });
     })
     .on('updated', function (device) {
@@ -94,12 +162,12 @@ app.service('devices')
 
 // When an event is received from the xbee network, translate the data
 // and forward to the gameserver.
-xbee.helloStream
-    .takeUntil(xbee.ctrlCStream)
+helloStream
+    .takeUntil(ctrlCStream)
     .subscribe(function (s) {
         console.log(` helloStream: ${s}`);
         evs.create({
             type: 'join', // ex: 'buttonPress'
             origin: 'idk' // @todo get origin address64 somehow
         });
-    }, xbee.errorCb, xbee.exitCb);
+    }, errorCb, exitCb);
