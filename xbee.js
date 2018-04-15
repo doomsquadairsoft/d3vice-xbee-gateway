@@ -4,15 +4,18 @@ const R = require("ramda");
 const xbee_api = require("xbee-api");
 
 
+const destinationId = '0013A20040B51A26';
+const data = 'TIESTO';
+
 
 module.exports.xbee = xbee = xbeeRx({
-    serialport: "/dev/ttyUSB0",
+    serialport: "/dev/ttyUSB1",
     serialportOptions: {
         baudrate: 57600
     },
     module: "ZigBee",
-    // turn on debugging to see what the library is doing
-    debug: true
+    api_mode: 2,
+    debug: false
 });
 
 console.log("Monitoring incoming packets (press CTRL-C to stop)");
@@ -37,13 +40,14 @@ module.exports.ctrlCStream = rx.Observable.fromEvent(stdin, "data")
  */
  module.exports.helloStream = xbee
     .monitorTransmissions()
-    //.where(R.propEq("type", xbee_api.constants.ZIGBEE_RECEIVE_PACKET))
-    .where(R.propEq("type", 144))
+    .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
     .pluck("data")
     .map(function (buffer) {
         var s = buffer.toString();
-    return (s === "\r") ? "\n" : s;
-});
+        return (s === "\r") ? "\n" : s;
+    })
+    .where(R.is(String))
+    .where(R.equals('DCXHI'));
 
 
 

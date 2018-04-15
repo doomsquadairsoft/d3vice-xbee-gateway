@@ -1,0 +1,323 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">body { margin-left:0;margin-right:0;margin-top:0; }#google-cache-hdr {background:#f5f5f5 !important;font:13px arial,sans-serif !important;text-align:left !important;color:#202020 !important;border:0 !important;margin:0 !important;border-bottom:1px solid #cecece !important;line-height:16px !important ;padding:16px 28px 24px 28px !important;}#google-cache-hdr * {display:inline !important;font:inherit !important;text-align:inherit !important;color:inherit !important;line-height:inherit !important;background:none !important;border:0 !important;margin:0 !important;padding:0 !important;letter-spacing:0 !important;}#google-cache-hdr a {text-decoration:none !important;color:#1a0dab !important;}#google-cache-hdr a:hover { text-decoration:underline !important; }#google-cache-hdr a:visited { color:#609 !important; }#google-cache-hdr div { display:block !important;margin-top:4px !important; }#google-cache-hdr b {font-weight:bold !important;display:inline-block !important;direction:ltr !important;}pre { word-wrap:break-word; }pre { white-space:pre-wrap; }</style></head><body bgcolor="#ffffff" vlink="blue" link="blue"><div id="google-cache-hdr" dir="ltr"><div>This is the html version of the file <a href="http://ftp1.digi.com/support/images/App_Note__DebuggingJoining.pdf" dir="ltr">http://ftp1.digi.com/support/images/App_Note__DebuggingJoining.pdf</a>.<br><b>Google</b> automatically generates html versions of documents as we crawl the web.</div></div><div style="position:relative;margin:8px;">
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="Author" content="Damon Stewart">
+<meta name="Creator" content="Microsoft® Office Word 2007">
+<meta name="CreationDate" content="D:20090519031540">
+<meta name="ModDate" content="D:20090519031540">
+<meta name="Producer" content="Microsoft® Office Word 2007">
+<title>Debugging Joining in a ZigBee Network</title>
+
+<table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="1"><b>Page 1</b></a></font></td></tr></tbody></table><font size="3" face="Times"><span style="font-size:19px;font-family:Times">
+<div style="position:absolute;top:287;left:290"><nobr><b>Debugging Joining in a ZigBee Network</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:369;left:76"><nobr><b>Introduction</b></nobr></div>
+<div style="position:absolute;top:407;left:76"><nobr>In a ZigBee network, routers and end devices must discover and join a network before they can communicate with</nobr></div>
+<div style="position:absolute;top:430;left:76"><nobr>other ZigBee devices.  The XBee ZB firmware includes a number of AT commands that can be used to configure</nobr></div>
+<div style="position:absolute;top:453;left:76"><nobr>the ZigBee joining parameters (i.e. scan channels, PAN ID, permit join, security settings, etc).  See the XBee ZB</nobr></div>
+<div style="position:absolute;top:477;left:76"><nobr>product manual for details on the joining process and related AT commands.</nobr></div>
+<div style="position:absolute;top:515;left:76"><nobr>When becoming familiar with the concept of joining in ZigBee, there are a number of factors that determine</nobr></div>
+<div style="position:absolute;top:538;left:76"><nobr>which network(s) a device can join.  When an XBee fails to join a desired ZigBee network, the AI command can be</nobr></div>
+<div style="position:absolute;top:561;left:76"><nobr>used to determine the reason the join attempt failed.  This application note provides guidance on how to resolve</nobr></div>
+<div style="position:absolute;top:584;left:76"><nobr>joining problems based on the information contained in the AI command value.</nobr></div>
+<div style="position:absolute;top:661;left:76"><nobr><b>AI Command</b></nobr></div>
+<div style="position:absolute;top:699;left:76"><nobr>The AI command reports the association status from the last join attempt on an XBee router or end device.  If AI is</nobr></div>
+<div style="position:absolute;top:722;left:76"><nobr>set to 0, the XBee has successfully joined a ZigBee network.  If AI is set to 0xFF, the XBee is currently scanning one</nobr></div>
+<div style="position:absolute;top:745;left:76"><nobr>or more channels, searching for a valid ZigBee network to join.  For all other AI values, the XBee is not joined, and</nobr></div>
+<div style="position:absolute;top:768;left:76"><nobr>the AI code indicates a failure code from the last join attempt.</nobr></div>
+<div style="position:absolute;top:806;left:76"><nobr>The AI command can be queried in AT firmware by entering AT command mode and sending an “ATAI” command</nobr></div>
+<div style="position:absolute;top:830;left:76"><nobr>followed by a carriage return.  In API firmware, the following is an example API frame to query AI:</nobr></div>
+<div style="position:absolute;top:868;left:76"><nobr>7E 00 04 08 01 41 49 6C</nobr></div>
+<div style="position:absolute;top:944;left:76"><nobr><b>XBee Joining Behavior Review</b></nobr></div>
+<div style="position:absolute;top:982;left:76"><nobr>When attempting to join a network, the XBee scans the channels included in the SC (scan channels) bitmask until</nobr></div>
+<div style="position:absolute;top:1005;left:76"><nobr>a valid PAN is found, or until all SC channels have been scanned.  If a join attempt fails on a given channel, the</nobr></div>
+<div style="position:absolute;top:1028;left:76"><nobr>XBee will continue scanning on the next higher channel until all remaining SC channels have been scanned.</nobr></div>
+<div style="position:absolute;top:1066;left:76"><nobr>After scanning all SC channels, the XBee will delay for a time (with the receiver disabled) before starting a new</nobr></div>
+<div style="position:absolute;top:1090;left:76"><nobr>scan.  To satisfy ZigBee requirements, the XBee scans all channels up to 9 times per minute for the first 5 minutes</nobr></div>
+<div style="position:absolute;top:1113;left:76"><nobr>(since being powered on), and up to 3 times per minute thereafter.</nobr></div>
+<div style="position:absolute;top:1151;left:76"><nobr>The remainder of this document provides guidance on how to solve joining problems based on the AI code.  Each</nobr></div>
+<div style="position:absolute;top:1174;left:76"><nobr>page lists an AI code (orange oval) and steps to identify the root cause and correct the problem (blue rectangles).  </nobr></div>
+<div style="position:absolute;top:1198;left:76"><nobr>The following AI codes are included: </nobr></div>
+</span></font>
+
+<div style="position:absolute;top:1363;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="2"><b>Page 2</b></a></font></td></tr></tbody></table></div><font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:1475;left:260"><nobr><b>AI Code</b></nobr></div>
+<div style="position:absolute;top:1475;left:390"><nobr><b>Description</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:1497;left:260"><nobr>0x21</nobr></div>
+<div style="position:absolute;top:1497;left:390"><nobr>No PANs found</nobr></div>
+<div style="position:absolute;top:1518;left:260"><nobr>0x22</nobr></div>
+<div style="position:absolute;top:1518;left:390"><nobr>PAN(s) found with invalid PAN ID</nobr></div>
+<div style="position:absolute;top:1539;left:260"><nobr>0x23</nobr></div>
+<div style="position:absolute;top:1539;left:390"><nobr>Joining not allowed</nobr></div>
+<div style="position:absolute;top:1560;left:260"><nobr>0x27</nobr></div>
+<div style="position:absolute;top:1560;left:390"><nobr>Join failure</nobr></div>
+<div style="position:absolute;top:1581;left:260"><nobr>0x2B</nobr></div>
+<div style="position:absolute;top:1581;left:390"><nobr>Discovering coordinator</nobr></div>
+<div style="position:absolute;top:1602;left:260"><nobr>0xAD</nobr></div>
+<div style="position:absolute;top:1602;left:390"><nobr>Security key not received</nobr></div>
+<div style="position:absolute;top:1623;left:260"><nobr>0xAF</nobr></div>
+<div style="position:absolute;top:1623;left:390"><nobr>Pre-configured link key error</nobr></div>
+<div style="position:absolute;top:1644;left:260"><nobr>0xFF</nobr></div>
+<div style="position:absolute;top:1644;left:390"><nobr>Attempting a new join scan </nobr></div>
+</span></font>
+
+<div style="position:absolute;top:2551;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="3"><b>Page 3</b></a></font></td></tr></tbody></table></div><font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:3226;left:134"><nobr><b>Solution #2:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:3250;left:134"><nobr>Read the CH command (operating channel) on a device that is on the network.  Now read the SC</nobr></div>
+<div style="position:absolute;top:3274;left:134"><nobr>command value on the joining device.  Does the SC bitmask (scan channels) on the joining device</nobr></div>
+<div style="position:absolute;top:3297;left:134"><nobr>include the operating channel?</nobr></div>
+<div style="position:absolute;top:3335;left:134"><nobr>For example, if the CH command returns 0x0C, then SC on the joining device should have bit1 set</nobr></div>
+<div style="position:absolute;top:3358;left:134"><nobr>(i.e. 0x0002).  If the CH command returns 0x11, then SC on the joining device should have bit6 set</nobr></div>
+<div style="position:absolute;top:3381;left:134"><nobr>(i.e. 0x0040).</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:3507;left:128"><nobr><b>Solution #3: </b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:3532;left:128"><nobr>Read the ZS command (ZigBee stack profile) command on a device that is on the network.  Does the</nobr></div>
+<div style="position:absolute;top:3555;left:128"><nobr>ZS value on the joining device match?</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:2921;left:134"><nobr><b>Solution #1: </b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:2946;left:134"><nobr>The XBee can often return 0x21 for a brief time after leaving a network.  When it leaves a network,</nobr></div>
+<div style="position:absolute;top:2969;left:134"><nobr>it continues scanning at the next higher channels in the SC bitmask until it finds a new network, or</nobr></div>
+<div style="position:absolute;top:2992;left:134"><nobr>until it scans all remaining SC channels.  If a network is not found on the higher channels (from the</nobr></div>
+<div style="position:absolute;top:3016;left:134"><nobr>channel it left), it will report 0x21 until it starts a new scan.</nobr></div>
+<div style="position:absolute;top:3054;left:134"><nobr>If the 0x21 code is shortly replaced with a new code, see the new code to diagnose the problem.</nobr></div>
+</span></font>
+<font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:2695;left:163"><nobr>0x21 - </nobr></div>
+<div style="position:absolute;top:2754;left:141"><nobr>No PANs</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:2726;left:511"><nobr>0x21 indicates that a ZigBee network (with a</nobr></div>
+<div style="position:absolute;top:2751;left:533"><nobr>matching stack profile) was not found. </nobr></div>
+</span></font>
+
+<div style="position:absolute;top:3739;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="4"><b>Page 4</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:3883;left:163"><nobr>0x22 - </nobr></div>
+</span></font>
+<font size="4" face="Times"><span style="font-size:28px;font-family:Times">
+<div style="position:absolute;top:3940;left:144"><nobr>Wrong PAN</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:4104;left:150"><nobr><b>Solution #1:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:4128;left:150"><nobr>An AI value of 0x22 indicates the XBee found at least one ZigBee network.  Often times a</nobr></div>
+<div style="position:absolute;top:4151;left:150"><nobr>0x22 code indicates the PAN ID setting is wrong, or joining is not enabled on the desired</nobr></div>
+<div style="position:absolute;top:4174;left:150"><nobr>network.  If there are multiple ZigBee PANs in the area, it may not be scanning the channel of</nobr></div>
+<div style="position:absolute;top:4198;left:150"><nobr>the desired PAN.  It is also possible the security settings do not match.</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:4300;left:149"><nobr><b>Solution #2:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:4325;left:149"><nobr>Read the OP command value on a device that has joined the desired ZigBee network.  Now</nobr></div>
+<div style="position:absolute;top:4348;left:149"><nobr>read the ID command value on the joining device.  Is ID set to 0 (join any PAN ID)?  If not, is it</nobr></div>
+<div style="position:absolute;top:4371;left:149"><nobr>set to a value that matches the OP value of a device on the desired ZigBee network?</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:4490;left:155"><nobr><b>Solution #3:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:4515;left:155"><nobr>If more than 1 ZigBee network are operating in the area, read the CH command on a device</nobr></div>
+<div style="position:absolute;top:4538;left:155"><nobr>that has joined the desired network.  Now read the SC command value on the joining</nobr></div>
+<div style="position:absolute;top:4562;left:155"><nobr>device.  Does the SC bitmask (scan channels) on the joining device include the operating</nobr></div>
+<div style="position:absolute;top:4585;left:155"><nobr>channel?</nobr></div>
+<div style="position:absolute;top:4623;left:155"><nobr>For example, if the CH command returns 0x0C, then SC on the joining device should have</nobr></div>
+<div style="position:absolute;top:4646;left:155"><nobr>bit1 set (i.e. 0x0002).  If the CH command returns 0x11, then SC on the joining device</nobr></div>
+<div style="position:absolute;top:4669;left:155"><nobr>should have bit6 set (i.e. 0x0040).</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:3904;left:458"><nobr>0x22 indicates <font style="font-size:14px">the XBee found at least one ZigBee</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:3928;left:454"><nobr>network, but the XBee parameters do not match the</nobr></div>
+<div style="position:absolute;top:3952;left:504"><nobr>parameters of the discovered PAN(s).</nobr></div>
+</span></font>
+
+<div style="position:absolute;top:4927;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="5"><b>Page 5</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:5071;left:163"><nobr>0x23 - </nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:19px;font-family:Times">
+<div style="position:absolute;top:5126;left:130"><nobr>Joining Not Allowed</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:5350;left:175"><nobr><b>Solution #1: </b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:5374;left:175"><nobr>Read the NJ command on a device that has joined the desired network, preferably one</nobr></div>
+<div style="position:absolute;top:5398;left:175"><nobr>within range of the joining device.  If NJ is set less than 0xFF, joining might be disabled on</nobr></div>
+<div style="position:absolute;top:5421;left:175"><nobr>the network.  Do any nearby devices on the network have NJ set to 0xFF?  If not, joining</nobr></div>
+<div style="position:absolute;top:5444;left:175"><nobr>may be disabled.</nobr></div>
+<div style="position:absolute;top:5490;left:175"><nobr>If joining may be disabled, any of the following could be used to enable joining on a</nobr></div>
+<div style="position:absolute;top:5513;left:175"><nobr>device that is already part of the network:</nobr></div>
+<div style="position:absolute;top:5537;left:175"><nobr>- Press the commissioning button 2 times,</nobr></div>
+<div style="position:absolute;top:5560;left:175"><nobr>- Issue the CB2 command, or</nobr></div>
+<div style="position:absolute;top:5583;left:175"><nobr>- Set NJ to a different value</nobr></div>
+<div style="position:absolute;top:5606;left:175"><nobr>- Send a ZDO Permit-Join request to one or more devices to enable joining</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:5092;left:441"><nobr>0x23 indicates <font style="font-size:14px">the XBee found at least one valid ZigBee</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:5116;left:452"><nobr>network (that it could try to join), but joining was not</nobr></div>
+<div style="position:absolute;top:5140;left:547"><nobr>enabled on the network.</nobr></div>
+</span></font>
+
+<div style="position:absolute;top:6115;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="6"><b>Page 6</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:6259;left:163"><nobr>0x27 - </nobr></div>
+</span></font>
+<font size="4" face="Times"><span style="font-size:28px;font-family:Times">
+<div style="position:absolute;top:6316;left:146"><nobr>Join Failure</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:6453;left:161"><nobr><b>Solution #1:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:6478;left:161"><nobr>Read the EE command on a device that has joined the desired network.  Now read the EE</nobr></div>
+<div style="position:absolute;top:6501;left:161"><nobr>command on the joining device.  Do the values match?  Was the KY value set on devices</nobr></div>
+<div style="position:absolute;top:6524;left:161"><nobr>that already joined the network?  Does the joining device have the same KY setting?  (KY is</nobr></div>
+<div style="position:absolute;top:6548;left:161"><nobr>a write-only command so it cannot be read.)</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:6658;left:161"><nobr><b>Solution #2:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:6683;left:161"><nobr>Read the CH command on a device that has joined the desired network.  Now read the SC</nobr></div>
+<div style="position:absolute;top:6706;left:161"><nobr>command value on the joining device.  Does the SC bitmask (scan channels) on the joining</nobr></div>
+<div style="position:absolute;top:6729;left:161"><nobr>device include the operating channel?</nobr></div>
+<div style="position:absolute;top:6767;left:161"><nobr>For example, if the CH command returns 0x0C, then SC on the joining device should have</nobr></div>
+<div style="position:absolute;top:6791;left:161"><nobr>bit1 set (i.e. 0x0002).  If the CH command returns 0x11, then SC on the joining device</nobr></div>
+<div style="position:absolute;top:6814;left:161"><nobr>should have bit6 set (i.e. 0x0040).</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:6925;left:157"><nobr><b>Solution #3:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:6949;left:157"><nobr>If the joining device is an end device, the network may not have enough end device</nobr></div>
+<div style="position:absolute;top:6972;left:157"><nobr>capacity for the joining device.  (Each router and coordinator can only allow a finite number</nobr></div>
+<div style="position:absolute;top:6996;left:157"><nobr>of end device children to join.)  To check end device capacity, read the NC command on all</nobr></div>
+<div style="position:absolute;top:7019;left:157"><nobr>routers and coordinator in the network.  If NC reports a non-zero value on at least one</nobr></div>
+<div style="position:absolute;top:7042;left:157"><nobr>device, then that device can allow more end devices to join.  Otherwise, if NC=0 on all</nobr></div>
+<div style="position:absolute;top:7065;left:157"><nobr>routers and the coordinator, then the network cannot allow any more end devices to join. </nobr></div>
+<div style="position:absolute;top:7089;left:157"><nobr>Add more routers to increase the number of end devices that can join.</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:6271;left:433"><nobr>0x27 indicates <font style="font-size:14px">the XBee attempted to join a ZigBee</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:6296;left:488"><nobr>network but the join attempt failed.</nobr></div>
+</span></font>
+
+<div style="position:absolute;top:7303;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="7"><b>Page 7</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:7447;left:162"><nobr>0x2B - </nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:7501;left:127"><nobr>Discovering Coordinator</nobr></div>
+<div style="position:absolute;top:7641;left:147"><nobr><b>Solution #1:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:7665;left:147"><nobr>If JV is set to 1, the XBee will attempt to discover the coordinator on a network before</nobr></div>
+<div style="position:absolute;top:7689;left:147"><nobr>considering itself joined.  It does this by sending a ZDO broadcast to discover the 64-bit</nobr></div>
+<div style="position:absolute;top:7712;left:147"><nobr>address of the coordinator.  If AI returns 0x2B, the XBee has sent the address discovery ZDO</nobr></div>
+<div style="position:absolute;top:7735;left:147"><nobr>request and is waiting for a response.  Within a very short time, the AI code should change to 0</nobr></div>
+<div style="position:absolute;top:7758;left:147"><nobr>if the address is discovered.  If AI does not change to 0, then the address discovery failed.</nobr></div>
+<div style="position:absolute;top:7796;left:147"><nobr>If joining fails, is the coordinator powered on?</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:7459;left:434"><nobr>0x2B indicates <font style="font-size:14px">the XBee has joined a ZigBee network and</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:7484;left:490"><nobr>is attempting to discover the coordinator.</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:7932;left:146"><nobr><b>Solution #2:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:7957;left:146"><nobr>Read the CH command on the coordinator.  Now read the SC command value on the joining</nobr></div>
+<div style="position:absolute;top:7980;left:146"><nobr>device.  Does the SC bitmask (scan channels) on the joining device include the coordinator’s</nobr></div>
+<div style="position:absolute;top:8004;left:146"><nobr>operating channel?</nobr></div>
+<div style="position:absolute;top:8042;left:146"><nobr>For example, if the CH command returns 0x0C, then SC on the joining device should have bit1</nobr></div>
+<div style="position:absolute;top:8065;left:146"><nobr>set (i.e. 0x0002).  If the CH command returns 0x11, then SC on the joining device should have</nobr></div>
+<div style="position:absolute;top:8088;left:146"><nobr>bit6 set (i.e. 0x0040).</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:8185;left:141"><nobr><b>Solution #3:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:8209;left:141"><nobr>Are there routers in the area that are part of a separate ZigBee network?  Is the joining device</nobr></div>
+<div style="position:absolute;top:8233;left:141"><nobr>joining a second network that does not have a coordinator? </nobr></div>
+</span></font>
+
+<div style="position:absolute;top:8491;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="8"><b>Page 8</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:8635;left:159"><nobr>0xAD - </nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:8689;left:128"><nobr>Security Key Not Received</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:8835;left:186"><nobr><b>Solution #1:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:8860;left:186"><nobr>The XBee must have EE set to 1 and then join a network where security is</nobr></div>
+<div style="position:absolute;top:8883;left:186"><nobr>not enabled to get this code.  Is security enabled on the desired network? </nobr></div>
+<div style="position:absolute;top:8906;left:186"><nobr>Should EE be set to 0 on the XBee?</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:8648;left:502"><nobr>0xAD indicates <font style="font-size:14px">the XBee did not receive the</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:8673;left:490"><nobr>network security key from the network it joined,</nobr></div>
+<div style="position:absolute;top:8696;left:508"><nobr>when it expected to receive a network key.</nobr></div>
+</span></font>
+<font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:9161;left:163"><nobr>0xAF - </nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:9214;left:169"><nobr>Link Key Error</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:9387;left:210"><nobr><b>Solution #1:</b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:9412;left:210"><nobr>To fix this problem, set the pre-configured link key (KY) on the joining device</nobr></div>
+<div style="position:absolute;top:9435;left:210"><nobr>to match the pre-configured link key (KY) on devices in the network.</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:9180;left:507"><nobr>0xAF indicates <font style="font-size:14px">the XBee joined a secure</font></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:9205;left:486"><nobr>network, but the network has a pre-configured</nobr></div>
+<div style="position:absolute;top:9228;left:510"><nobr>link key and the joining device does not.</nobr></div>
+</span></font>
+
+<div style="position:absolute;top:9679;left:0"><hr><table width="100%" border="0"><tbody><tr><td bgcolor="eeeeee" align="right"><font face="arial,sans-serif"><a name="9"><b>Page 9</b></a></font></td></tr></tbody></table></div><font size="5" face="Times"><span style="font-size:39px;font-family:Times">
+<div style="position:absolute;top:9823;left:165"><nobr>0xFF - </nobr></div>
+</span></font>
+<font size="4" face="Times"><span style="font-size:21px;font-family:Times">
+<div style="position:absolute;top:9879;left:138"><nobr>Attempting Join</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:10037;left:196"><nobr><b>Solution: </b></nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:14px;font-family:Times">
+<div style="position:absolute;top:10062;left:196"><nobr>This value should be replaced by another value after a short time.</nobr></div>
+</span></font>
+<font size="3" face="Times"><span style="font-size:16px;font-family:Times">
+<div style="position:absolute;top:9834;left:459"><nobr>The XBee reports an AI code of 0xFF at the</nobr></div>
+<div style="position:absolute;top:9860;left:480"><nobr>beginning of each new channel scan. </nobr></div>
+</span></font>
+
+
+</div></body></html>

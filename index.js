@@ -23,7 +23,7 @@ const validUrl = require('valid-url');
 
 
 const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
-console.log(gameServerAddress)
+console.log(`gameServerAddress ${gameServerAddress}`)
 
 /**
  * Ensure game server address is defined
@@ -62,11 +62,11 @@ app.service('devices')
     })
     .on('updated', function (device) {
 	console.log(`device ${device.did} has changed`)
-        console.log(device)
+        console.log(`device: ${device}`)
     })
     .on('patched', function(device) {
         console.log(`device ${device.did} has patched`)
-        console.log(device)
+        console.log(`device: ${device}`)
     })
 
 
@@ -75,7 +75,7 @@ app.service('devices')
 app.service('devices')
     .find()
     .then(function(devices) {
-        console.log(devices);
+        console.log(`devices: ${devices}`);
     });
 
 // When an event is received from the xbee network, translate the data
@@ -84,8 +84,8 @@ app.service('devices')
 xbee.helloStream
     .takeUntil(xbee.ctrlCStream)
     .subscribe(function (s) {
-        console.log(s);
-        evs.create({
-            type: 'join' // ex: 'buttonPress'
-        })
+        console.log(` helloStream: ${s}`);
+        // evs.create({
+        //     type: 'join' // ex: 'buttonPress'
+        // })
     }, xbee.errorCb, xbee.exitCb);

@@ -36,3 +36,31 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 
 * change light color
 * change light parameter
+
+### Setting up a new XBee for use with d3vice-controlpoint-xbee
+
+All writes are done using XCTU-NG. Feel free do to use OTAP!
+Default serial settings are 9600/8/N/1/N
+
+  * Update firmware to latest version
+    * firmware choice must be ZB Coordinator or ZB Endpoint
+  * Write Node Identifier (NI)
+    * `node generateNI.js` will give you some NI ideas
+  * Write BD=6 (Baudrate 57600)
+  * Write AP=2 (API mode with escaping)
+  * Write ID=73706F6B616E6561 (ZB PAN "SPOKANEA")
+
+If you have trouble joining the PAN, check AI for error codes.
+
+| AI Code       | Description   |
+| ------------- |:-------------:|
+| 0x21          | No PANs found |
+| 0x22          | PAN(s) found with invalid PAN ID |
+| 0x23          | Joining not allowed |
+| 0x27          | Join failure |
+| 0x2B          | Discovering coordinator |
+| 0xAD          | Security key not received |
+| 0xAF          | Pre-configured link key error |
+| 0xFF          | Attempting a new join scan |
+
+See ./datasheets/Debugging Joining in a ZigBee Network for more deets
