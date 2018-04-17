@@ -36,7 +36,7 @@ var xbee = xbeeRx({
     },
     module: "ZigBee",
     api_mode: 2,
-    debug: false
+    debug: true
 });
 
 console.log("Monitoring incoming packets (press CTRL-C to stop)");
@@ -62,13 +62,25 @@ var ctrlCStream = rx.Observable.fromEvent(stdin, "data")
 var helloStream = xbee
     .monitorTransmissions()
     .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
-    .pluck("data")
-    .map(function (buffer) {
-        var s = buffer.toString();
-        return (s === "\r") ? "\n" : s;
+    .where(R.prop("data"))
+    .where(function(frame) {
+        return R.test(/DCXHI/, frame.data.toString());
     })
-    .where(R.is(String))
-    .where(R.equals('DCXHI'));
+    .map(frame => [
+        frame.remote64,
+        frame.data.toString(),
+    ])
+    //.where(R.test(/DCXHI/))
+    //.where(R.is(String), [0])
+
+    // .pluck("data")
+    // .map(function (buffer) {
+    //     var s = buffer.toString();
+    //     return (s === "\r") ? "\n" : s;
+    // })
+    // .where(R.is(String))
+    // .where(R.test(/DCXHI/));
+
 
 
 
@@ -168,6 +180,8 @@ helloStream
         console.log(` helloStream: ${s}`);
         evs.create({
             type: 'join', // ex: 'buttonPress'
-            origin: 'idk' // @todo get origin address64 somehow
+            origin: s[0] // @todo get origin address64 somehow
         });
     }, errorCb, exitCb);
+
+//Rx.Observable.combineLatest(Promise.resolve())

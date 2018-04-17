@@ -9,7 +9,7 @@ const data = 'TIESTO';
 
 
 module.exports = xbee = xbeeRx({
-    serialport: "/dev/ttyUSB1",
+    serialport: "/dev/ttyUSB4",
     serialportOptions: {
         baudrate: 57600
     },
