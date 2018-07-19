@@ -14,7 +14,7 @@
 "use strict";
 
 
-
+require('dotenv').config();
 const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
 const io = require('socket.io-client');
@@ -27,10 +27,11 @@ const xbee_api = require("xbee-api");
 
 const destinationId = '0013A20040B51A26';
 const data = 'TIESTO';
+const xbeeUsbDevice = process.env.XBEE_USB_DEVICE;
 
 
 var xbee = xbeeRx({
-    serialport: "/dev/ttyUSB4",
+    serialport: xbeeUsbDevice,
     serialportOptions: {
         baudrate: 57600
     },
