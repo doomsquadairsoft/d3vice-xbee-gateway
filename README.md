@@ -13,6 +13,12 @@ This project requires a [linux computer](http://amzn.to/2HXWCA8) with WiFi and X
 
 ## Installation
 
+The user account which runs the gateway needs linux permissions to access tty and dialout groups (May or may not be required for your OS)
+
+  `sudo usermod -aG tty,dialout <YOUR_USERNAME_HERE>`
+
+Reboot your computer (or do fancy permmission refresh stuff) after performing the above, so permissions are applied.
+
 The gateway uses nodejs to to communicate over USB with the radio, and communicate with the server using feathersjs realtime framework. Installing project dependencies is simple--
 
     npm install
@@ -22,6 +28,12 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
     npm run start
 
 ## Documentation
+
+### Parts list
+
+  * [XBP24BZ7UIT-004](https://www.digi.com/support/productdetail?pid=4549&osvid=0&s=507&tp=1)
+  * [XBee to USB adapter](https://amzn.to/2Omzm2G)
+  *
 
 ### Wireless communication protocol
 
@@ -42,7 +54,10 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 All writes are done using XCTU-NG. Feel free do to use OTAP!
 Default serial settings are 9600/8/N/1/N
 
-  * Update firmware to latest version
+  * Update firmware to latest version. XBP24-ZB fw is needed.
+    * Depending on how you installed, XCTU's permissions may cause problems updating fw. You may need to run as root to update firmware.
+      * Run XCTU from CLI to see error messages.
+    * Install legacy firmware package in X-CTU. Or manually download the firmware. [try here](https://www.digi.com/support/productdetail?pid=4549&osvid=0&s=507&tp=1) or [here](ftp://ftp1.digi.com/support/firmware) or [here](https://www.digi.com/support/productdetail?pid=3430&type=firmware)
     * firmware choice must be ZB Coordinator or ZB Endpoint
   * Write Node Identifier (NI)
     * `node generateNI.js` will give you some NI ideas

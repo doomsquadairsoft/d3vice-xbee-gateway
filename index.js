@@ -23,6 +23,10 @@ const rx = require("rx");
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
 const xbee_api = require("xbee-api");
+const chalk = require('chalk');
+var Datastore = require('nedb')
+var db = new Datastore({ filename: './data/devices.nedb', autoload: true });
+
 
 
 const destinationId = '0013A20040B51A26';
@@ -117,7 +121,7 @@ if (typeof gameServerAddress === 'undefined')
  * Ensure game server address is a valid URI
  */
 if (validUrl.isUri(gameServerAddress)){
-    console.log('Looks like a URI');
+    console.log('The game server address looks valid.');
 } else {
     throw new Error('D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. '+
     'Example: http://game.doomsquadairsoft.com or http://192.168.1.112')
@@ -136,28 +140,44 @@ app.configure(socketio(socket));
 // get a handle on the event service
 const evs = app.service('events');
 
-evs.on('created', function (device) {
-    // idk
+app.on('error', function (err) {
+  console.error('an error occured.');
+  console.error(err);
+})
+
+evs.on('created', function (event) {
+  //console.log(event); 0013a20040b51a26
+  var type = event.type || '';
+  var device = event.device || '';
+  var order = event.order || '';
+
+  console.log(`  >> event seen.\n     type=${type} device=${device} order=${order}`);
+  //device = Buffer.from(device, 'hex');
+
+
+  if (type === 'order') {
+    xbee.remoteTransmit({
+        destination64: device,
+        broadcast: false,
+        data: order
+    })
+    .subscribe(function xbeeTXSuccess () {
+        console.log("Device order transmission successful~");
+    }, function xbeeTXFail (e) {
+        console.log("Device order transmission failed:\n", e);
+    });
+  }
+
 });
 
 // Receive real-time events through Socket.io
 app.service('devices')
     .on('created', function (device) {
         console.log('New device created', device);
-        xbee.remoteTransmit({
-            destinationId: device.did,
-            broadcast: false,
-            data: 'DCXGA0' // Tell DCX to act GAME 0
-        })
-        .subscribe(function xbeeTXSuccess () {
-            console.log("Device creation transmission successful~");
-        }, function xbeeTXFail (e) {
-            console.log("Device creation transmission failed:\n", e);
-        });
     })
     .on('updated', function (device) {
-	console.log(`device ${device.did} has changed`)
-        console.log(`device: ${device}`)
+	     console.log(`device ${device.did} has changed`)
+       console.log(`device: ${device}`)
     })
     .on('patched', function(device) {
         console.log(`device ${device.did} has patched`)
@@ -170,8 +190,24 @@ app.service('devices')
 app.service('devices')
     .find()
     .then(function(devices) {
-        console.log(`devices: ${devices}`);
-    });
+        console.log(chalk.bold.blue('D3VICES:'));
+        console.log(devices);
+    })
+    .catch((e) => {
+      console.error(chalk.red("WARNING: Gateway had a problem connecting to the game server!"));
+      console.error(chalk.red(e));
+    })
+
+function forwardEventToGameserver(streamData) {
+  var did = streamData[0];
+  var msg = streamData[1];
+  var type = (msg.substring(0, 5) === 'DCXHI') ? 'join' : 'idk';
+  evs.create({
+    type: type, // ex: 'buttonPress'
+    device: did // @todo get origin address64 somehow
+  })
+}
+
 
 // When an event is received from the xbee network, translate the data
 // and forward to the gameserver.
@@ -179,10 +215,7 @@ helloStream
     .takeUntil(ctrlCStream)
     .subscribe(function (s) {
         console.log(` helloStream: ${s}`);
-        evs.create({
-            type: 'join', // ex: 'buttonPress'
-            origin: s[0] // @todo get origin address64 somehow
-        });
+        forwardEventToGameserver(s);
     }, errorCb, exitCb);
 
 //Rx.Observable.combineLatest(Promise.resolve())
