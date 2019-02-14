@@ -23,6 +23,15 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 
     npm install
 
+## Setup
+
+The gateway computer will need two environment variables set. This can be done using environment variables in your shell, or configured in an `.env` file. The first variable is the URL to the DooM HQ server, `D3VICE_GAMESERVER_ADDRESS`. The second is the filesystem path to the USB device that is the XBee radio, `XBEE_USB_DEVICE`. Here is an example .env file--
+
+```
+D3VICE_GAMESERVER_ADDRESS=http://hq.doomsquadairsoft.com:5000
+XBEE_USB_DEVICE=/dev/ttyUSB1
+```
+
 ## Running
 
     npm run start
@@ -51,7 +60,7 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 
 ### Setting up a new XBee for use with d3vice-controlpoint-xbee
 
-All writes are done using XCTU-NG. Feel free do to use OTAP!
+All writes are done using XCTU-NG. Feel free to use OTAP!
 Default serial settings are 9600/8/N/1/N
 
   * Update firmware to latest version. XBP24-ZB fw is needed.
