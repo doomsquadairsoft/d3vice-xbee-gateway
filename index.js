@@ -121,9 +121,9 @@ if (typeof gameServerAddress === 'undefined')
  * Ensure game server address is a valid URI
  */
 if (validUrl.isUri(gameServerAddress)){
-    console.log('The game server address looks valid.');
+    console.log('  ✔️ The game server address looks valid.');
 } else {
-    throw new Error('D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. '+
+    throw new Error('  ❌ D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. '+
     'Example: http://game.doomsquadairsoft.com or http://192.168.1.112')
 }
 
