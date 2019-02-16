@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index",
     "idgen": "node generateNI",
-    "dev": "npx supervisor -t -k -w . index"
+    "dev": "npx supervisor -k -t -w . --extensions 'node,js,.env,json' index"
   },
   "repository": {
     "type": "git",
@@ -23,22 +23,22 @@
   },
   "homepage": "https://github.com/doomsquadairsoft/d3vice-xbee-gateway#readme",
   "dependencies": {
-    "@feathersjs/feathers": "^3.1.3",
-    "@feathersjs/socketio-client": "^1.1.0",
+    "@feathersjs/feathers": "^3.3.1",
+    "@feathersjs/socketio-client": "^1.2.1",
     "blessed": "^0.1.81",
     "bluebird": "^3.5.3",
-    "chalk": "^2.4.1",
-    "dotenv": "^6.0.0",
+    "chalk": "^2.4.2",
+    "dotenv": "^6.2.0",
     "express": "^4.16.4",
     "nedb": "^1.8.0",
-    "ramda": "^0.25.0",
+    "ramda": "^0.26.1",
     "rx": "^4.1.0",
-    "serialport": "^6.1.1",
-    "socket.io-client": "^2.0.4",
+    "serialport": "^7.1.4",
+    "socket.io-client": "^2.2.0",
     "valid-url": "^1.0.9",
     "validate.js": "^0.12.0",
     "xbee-api": "^0.6.0",
-    "xbee-rx": "^3.0.1"
+    "xbee-rx": "^4.0.1"
   },
   "engines": {
     "node": "^8.0.0"

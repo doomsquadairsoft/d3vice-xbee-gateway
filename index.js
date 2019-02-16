@@ -6,21 +6,23 @@ const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
 const io = require('socket.io-client');
 const validUrl = require('valid-url');
-const rx = require("rx");
+const rxjs = require("rx");
+// const operators = rxjs.operators
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
 const xbee_api = require("xbee-api");
 const chalk = require('chalk');
 const fs = require('fs');
 const Promise = require('bluebird');
-var Datastore = require('nedb')
-var db = new Datastore({
+const Datastore = require('nedb')
+const db = new Datastore({
   filename: './data/devices.nedb',
   autoload: true
 });
 const version = require('./package.json').version;
-
-
+const xbeeDeviceRegex = /^8-/;
+const xbeeDeviceFilter = R.propSatisfies(R.test(xbeeDeviceRegex), 'did');
+const isXBeeDevice = R.compose(R.test(xbeeDeviceRegex), R.prop('did'));
 
 const destinationId = '0013A20040B51A26';
 const data = 'TIESTO';
@@ -33,8 +35,8 @@ const data = 'TIESTO';
  * Finds the USB device on the filesystem that is an XBee radio. Example: /dev/ttyUSB0.
  * If there are more than one XBee, the first one is chosen.
  */
-const getUsbDevice = function () {
-  return new Promise(function (resolve, reject) {
+const getUsbDevice = function() {
+  return new Promise(function(resolve, reject) {
     const devDir = '/dev/';
     const ttyUsbRegex = /^ttyUSB\d+$/;
     fs.readdir(devDir, (err, files) => {
@@ -55,11 +57,11 @@ const getUsbDevice = function () {
 }
 
 const isUsbDeviceAnXbee = (filename) => {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     const maybeAnXbee = xbeeRx({
       serialport: filename,
       serialportOptions: {
-        baudrate: 57600
+        baudRate: 57600
       },
       module: "ZigBee",
       api_mode: 2,
@@ -81,6 +83,24 @@ const isUsbDeviceAnXbee = (filename) => {
   });
 }
 
+const forwardEventToGameserver = (streamData) => {
+  const did = streamData[0];
+  const msg = streamData[1];
+  const type = (msg.substring(0, 5) === 'DCXHI') ? 'join' : 'idk';
+  evs.create({
+    type: type, // ex: 'buttonPress'
+    device: did // @todo get origin address64 somehow
+  });
+}
+
+const sendDataToDevice = (device) => {
+  const did = device.did;
+
+  // @TODO send the data over the radio
+}
+
+
+
 const doShowIntro = () => {
   console.log(`  ${chalk.red.bold('DooM D3VICES')} ${chalk.white.bold('XBee to Wi-Fi Gateway')} version ${version}`);
 }
@@ -89,11 +109,16 @@ const doShowIntro = () => {
 doShowIntro();
 
 getUsbDevice().then((filename) => {
+  if (typeof filename === 'undefined') throw new Error('No valid USB XBee radios found.')
   console.log(`  🎯 ${filename} is our XBee.`);
   doRunGateway(filename);
-}).catch(function (e) {
+}).catch(function(e) {
   console.log(e);
 });
+
+const initialWait = 3000;
+const period = 5000;
+// var idk = rxjs.timer(initialWait, period);
 
 
 
@@ -102,20 +127,95 @@ const doRunGateway = (xbeeFilename) => {
   var xbee = xbeeRx({
     serialport: xbeeFilename,
     serialportOptions: {
-      baudrate: 57600
+      baudRate: 57600
     },
     module: "ZigBee",
     api_mode: 2,
     debug: true
   });
 
-  console.log("  🤖 Monitoring incoming packets (press CTRL-C to stop)");
+  //console.log("  🤖 Monitoring incoming packets (press CTRL-C to stop)");
 
-  var stdin = process.stdin;
-  stdin.setRawMode(true);
+  // var stdin = process.stdin;
+  // stdin.setRawMode(true);
 
 
+  // idk.subscribe(
+  //   (x) => {
+  //     console.log(`first function is like what, a success? ${x}`)
+  //   },
+  //   (err) => {
+  //     console.log(`second function is like what, an error? ${err}`)
+  //   },
+  //   (x) => {
+  //     console.log(`third function is like what, completion? ${x}`)
+  //   }
+  // )
 
+  const remoteCommandStream = xbee.remoteCommand({
+    destinationId: undefined,
+    broadcast: true,
+    command: 'DB'
+  });
+
+
+  const source = rxjs.Observable.timer(1000, 2000);
+  const sauce = rxjs.Observable.timer(1500, 2000);
+
+  console.log(`remoteCommmandStream is type: ${R.type(remoteCommandStream)} while source is type ${R.type(source)}`);
+
+  const combinedObservables = rxjs.Observable.combineLatest(source, remoteCommandStream);
+
+  // const observable = new Observable(subscriber => {
+  //   subscriber.next('8-switzerland-robust');
+  //   subscriber.complete();
+  // });
+
+  combinedObservables.subscribe(
+    (x) => {
+      console.log(`nexted. ${JSON.stringify(x)}`)
+    },
+    (err) => {
+      console.log(`err'd: ${err}`)
+    },
+    () => {
+      console.log(`completo`)
+    }
+  )
+
+  // var source = rxjs.Observable.timer(0, 5000)
+  //   .timeInterval()
+  //   xbee.remoteCommand({
+  //     destinationId: '8-switzerland-robust',
+  //     command: 'DB',
+  //   }).subscribe((frame) => {
+  //     console.log(`DB response: ${frame.commandData}`);
+  //   }, (e) => {
+  //     console.log(`command failed: ${e}`);
+  //   })
+  //   .repeat();
+  //
+  // var subscription = source.subscribe(
+  //   function(x) {
+  //     console.log('Next: ' + x);
+  //   },
+  //   function(err) {
+  //     console.log('Error: ' + err);
+  //   },
+  //   function() {
+  //     console.log('Completed');
+  //   });
+
+
+  // get RSSI every so often
+
+  // .pipe(
+  //   operators.interval(5000),
+  //   operators.timeInterval(),
+  //   operators.take(3)
+  // );
+
+  //rssiStream
 
 
   /**
@@ -123,17 +223,17 @@ const doRunGateway = (xbeeFilename) => {
    * we use this later to determine when to stop listening
    * to the serial port
    */
-  var ctrlCStream = rx.Observable.fromEvent(stdin, "data")
-    .where(function monitorCtrlCOnData(data) {
-      return data.length === 1 && data[0] === 0x03; // Ctrl+C
-    })
-    .take(1);
+  // var ctrlCStream = rxjs.Observable.fromEvent(stdin, "data")
+  //   .where(function monitorCtrlCOnData(data) {
+  //     return data.length === 1 && data[0] === 0x03; // Ctrl+C
+  //   })
+  //   .take(1);
 
   /**
    * configure a stream for handling HELLOs from controlpoints
    * the HELLO packet type is within type 144 (0x90) ZIGBEE_RECEIVE_PACKET
    */
-  var helloStream = xbee
+  const helloStream = xbee
     .monitorTransmissions()
     .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
     .where(R.prop("data"))
@@ -144,6 +244,11 @@ const doRunGateway = (xbeeFilename) => {
       frame.remote64,
       frame.data.toString(),
     ])
+
+
+
+
+
   //.where(R.test(/DCXHI/))
   //.where(R.is(String), [0])
 
@@ -209,16 +314,20 @@ const doRunGateway = (xbeeFilename) => {
   // get a handle on the event service
   const evs = app.service('events');
 
+  const timeline = app.service('timeline');
+
+
   app.on('error', function(err) {
     console.error('an error occured.');
     console.error(err);
-  })
+  });
+
 
   evs.on('created', function(event) {
     //console.log(event); 0013a20040b51a26
-    var type = event.type || '';
-    var device = event.device || '';
-    var order = event.order || '';
+    const type = event.type || '';
+    const device = event.device || '';
+    const order = event.order || '';
 
     console.log(`  >> event seen.\n     type=${type} device=${device} order=${order}`);
     //device = Buffer.from(device, 'hex');
@@ -242,54 +351,57 @@ const doRunGateway = (xbeeFilename) => {
   // Receive real-time events through Socket.io
   app.service('devices')
     .on('created', function(device) {
-      console.log('  👀 New device created', device);
+      if (isXBeeDevice(device))
+        console.log('  👀 New XBee device created', device);
     })
     .on('updated', function(device) {
-      console.log(`  👀 device ${device.did} has changed`)
-      console.log(`  👀 device: ${JSON.stringify(device)}`)
+      if (isXBeeDevice(device)) {
+        console.log(`  👀 device ${device.did} has changed`)
+        console.log(`  👀 device: ${JSON.stringify(device)}`)
+      }
     })
     .on('patched', function(device) {
-      console.log(`  👀 device ${device.did} has patched`)
-      console.log(`  👀 device: ${JSON.stringify(device)}`)
+      if (isXBeeDevice(device)) {
+        console.log(`  👀 device ${device.did} has patched`)
+        console.log(`  👀 device: ${JSON.stringify(device)}`)
+        // send out an update to the remote xbee device
+
+      }
     })
     .on('removed', function(device) {
-      console.log(`  👀 device ${device.did} was removed.`)
-      console.log(`  👀 device: ${JSON.stringify(device)}`)
+      if (isXBeeDevice(device)) {
+        console.log(`  👀 device ${device.did} was removed.`)
+        console.log(`  👀 device: ${JSON.stringify(device)}`)
+      }
     })
 
 
 
-  // Get the list of devices that exist on the gameserver
+  // Get the list of devices that exist on the gameserver.
+  // DIDs starting with 8 are xbee devices.
+  // All other DID prefixes will be ignored.
   app.service('devices')
     .find()
     .then(function(devices) {
-      console.log(`  💼 ${chalk.bold.blue(`${devices.length} D3VICES:`)}`);
-      console.log(`    ${R.map((d) => `${d.name}(${d.did})`, devices)}`);
+      const xbeeDevices = R.filter(xbeeDeviceFilter, devices);
+      console.log(`  💼 ${chalk.bold.blue(`${xbeeDevices.length} XBEE D3VICE${xbeeDevices.length > 1 ? 'S' : ''}:`)}`);
+      console.log(`    ${R.map((d) => `${d.name}(${d.did})`, xbeeDevices)}`);
     })
     .catch((e) => {
       console.error(`  ⚠️ ${chalk.red("WARNING: Gateway had a problem connecting to the game server!")}`);
       console.error(`  🚨 ${chalk.red(e)}`);
     })
 
-  function forwardEventToGameserver(streamData) {
-    var did = streamData[0];
-    var msg = streamData[1];
-    var type = (msg.substring(0, 5) === 'DCXHI') ? 'join' : 'idk';
-    evs.create({
-      type: type, // ex: 'buttonPress'
-      device: did // @todo get origin address64 somehow
-    })
-  }
 
 
   // When an event is received from the xbee network, translate the data
   // and forward to the gameserver.
   helloStream
-    .takeUntil(ctrlCStream)
+    // .takeUntil(ctrlCStream)
     .subscribe(function(s) {
       console.log(`  🚿 helloStream: ${s}`);
       forwardEventToGameserver(s);
     }, errorCb, exitCb);
 
-  //Rx.Observable.combineLatest(Promise.resolve())
+  //rxjs.Observable.combineLatest(Promise.resolve())
 }
