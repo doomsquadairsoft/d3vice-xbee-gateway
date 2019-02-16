@@ -6,8 +6,19 @@ const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
 const io = require('socket.io-client');
 const validUrl = require('valid-url');
-const rxjs = require("rx");
-// const operators = rxjs.operators
+const {
+  rxjs,
+  of ,
+  interval,
+  Observable,
+  concat
+} = require("rxjs");
+const {
+  observeOn,
+  repeatWhen,
+  repeat,
+  delay
+} = require('rxjs/operators');
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
 const xbee_api = require("xbee-api");
@@ -110,15 +121,13 @@ doShowIntro();
 
 getUsbDevice().then((filename) => {
   if (typeof filename === 'undefined') throw new Error('No valid USB XBee radios found.')
-  console.log(`  🎯 ${filename} is our XBee.`);
+  console.log(`  🎯 ${chalk.bold.green(filename)} is our XBee.`);
   doRunGateway(filename);
 }).catch(function(e) {
   console.log(e);
 });
 
-const initialWait = 3000;
-const period = 5000;
-// var idk = rxjs.timer(initialWait, period);
+const timeoutBetweenRssi = 30000;
 
 
 
@@ -134,54 +143,34 @@ const doRunGateway = (xbeeFilename) => {
     debug: true
   });
 
-  //console.log("  🤖 Monitoring incoming packets (press CTRL-C to stop)");
 
-  // var stdin = process.stdin;
-  // stdin.setRawMode(true);
-
-
-  // idk.subscribe(
-  //   (x) => {
-  //     console.log(`first function is like what, a success? ${x}`)
-  //   },
-  //   (err) => {
-  //     console.log(`second function is like what, an error? ${err}`)
-  //   },
-  //   (x) => {
-  //     console.log(`third function is like what, completion? ${x}`)
-  //   }
-  // )
-
-  const remoteCommandStream = xbee.remoteCommand({
+  const rssiRequester = xbee.remoteCommand({
     destinationId: undefined,
     broadcast: true,
     command: 'DB'
-  });
+  })
 
+  const delayer = of (null).pipe(delay(timeoutBetweenRssi));
 
-  const source = rxjs.Observable.timer(1000, 2000);
-  const sauce = rxjs.Observable.timer(1500, 2000);
+  const transmissionLoop = concat(
+      delayer, rssiRequester
+    )
+    .pipe(
+      repeat()
+    )
+    .subscribe(
+      (x) => {
+        console.log(`nexted. ${JSON.stringify(x)}`)
+        // @TODO report to game server
+      },
+      (err) => {
+        console.log(`err'd: ${err}`)
+      },
+      () => {
+        console.log(`completo.`)
+      }
+    )
 
-  console.log(`remoteCommmandStream is type: ${R.type(remoteCommandStream)} while source is type ${R.type(source)}`);
-
-  const combinedObservables = rxjs.Observable.combineLatest(source, remoteCommandStream);
-
-  // const observable = new Observable(subscriber => {
-  //   subscriber.next('8-switzerland-robust');
-  //   subscriber.complete();
-  // });
-
-  combinedObservables.subscribe(
-    (x) => {
-      console.log(`nexted. ${JSON.stringify(x)}`)
-    },
-    (err) => {
-      console.log(`err'd: ${err}`)
-    },
-    () => {
-      console.log(`completo`)
-    }
-  )
 
   // var source = rxjs.Observable.timer(0, 5000)
   //   .timeInterval()
@@ -233,17 +222,17 @@ const doRunGateway = (xbeeFilename) => {
    * configure a stream for handling HELLOs from controlpoints
    * the HELLO packet type is within type 144 (0x90) ZIGBEE_RECEIVE_PACKET
    */
-  const helloStream = xbee
-    .monitorTransmissions()
-    .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
-    .where(R.prop("data"))
-    .where(function(frame) {
-      return R.test(/DCXHI/, frame.data.toString());
-    })
-    .map(frame => [
-      frame.remote64,
-      frame.data.toString(),
-    ])
+  // const helloStream = xbee
+  //   .monitorTransmissions()
+  //   .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
+  //   .where(R.prop("data"))
+  //   .where(function(frame) {
+  //     return R.test(/DCXHI/, frame.data.toString());
+  //   })
+  //   .map(frame => [
+  //     frame.remote64,
+  //     frame.data.toString(),
+  //   ])
 
 
 
@@ -396,12 +385,12 @@ const doRunGateway = (xbeeFilename) => {
 
   // When an event is received from the xbee network, translate the data
   // and forward to the gameserver.
-  helloStream
-    // .takeUntil(ctrlCStream)
-    .subscribe(function(s) {
-      console.log(`  🚿 helloStream: ${s}`);
-      forwardEventToGameserver(s);
-    }, errorCb, exitCb);
+  // helloStream
+  //   // .takeUntil(ctrlCStream)
+  //   .subscribe(function(s) {
+  //     console.log(`  🚿 helloStream: ${s}`);
+  //     forwardEventToGameserver(s);
+  //   }, errorCb, exitCb);
 
   //rxjs.Observable.combineLatest(Promise.resolve())
 }
