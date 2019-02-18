@@ -18,7 +18,8 @@ const {
   observeOn,
   repeatWhen,
   repeat,
-  delay
+  delay,
+  catchError,
 } = require('rxjs/operators');
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
@@ -209,14 +210,27 @@ const doRunGateway = (xbeeFilename) => {
     broadcast: true,
     command: 'DB'
   })
+  //
+  // const errorCatcher = (val) => {
+  //   try {
+  //     return rssiRequester;
+  //   }
+  //   catch (err) {
+  //     return Rx.Observable.empty();
+  //   }
+  // };
 
-  const delayer = of (null).pipe(delay(timeoutBetweenRssi));
+  const delayer = of(null).pipe(delay(timeoutBetweenRssi));
 
   const transmissionLoop = concat(
       delayer, rssiRequester
     )
     .pipe(
-      repeat()
+      repeat(),
+      catchError((err, caught) => {
+        console.error(`${chalk.red(`  😈 Oh noes, there was an error!`)} ${chalk.red.bold(`${err}.`)} ${chalk.yellow(`Let's not stop there... Never give up, never surrender! 💪`)}`);
+        return caught;
+      })
     )
     .subscribe(
       (x) => {

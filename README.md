@@ -25,11 +25,10 @@ The gateway uses nodejs to to communicate over USB with the radio, and communica
 
 ## Setup
 
-The gateway computer will need two environment variables set. This can be done using environment variables in your shell, or configured in an `.env` file. The first variable is the URL to the DooM HQ server, `D3VICE_GAMESERVER_ADDRESS`. The second is the filesystem path to the USB device that is the XBee radio, `XBEE_USB_DEVICE`. Here is an example .env file--
+The gateway computer will need on environment variable set. This can be done using environment variables in your shell, or configured in an `.env` file. `D3VICE_GAMESERVER_ADDRESS` is the URL to the DooM HQ server. Here is an example .env file--
 
 ```
 D3VICE_GAMESERVER_ADDRESS=http://hq.doomsquadairsoft.com:5000
-XBEE_USB_DEVICE=/dev/ttyUSB1
 ```
 
 ## Running
@@ -42,7 +41,6 @@ XBEE_USB_DEVICE=/dev/ttyUSB1
 
   * [XBP24BZ7UIT-004](https://www.digi.com/support/productdetail?pid=4549&osvid=0&s=507&tp=1)
   * [XBee to USB adapter](https://amzn.to/2Omzm2G)
-  *
 
 ### Wireless communication protocol
 

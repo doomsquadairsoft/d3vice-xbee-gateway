@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index",
+    "start": "node gateway",
     "idgen": "node generateNI",
-    "dev": "npx supervisor -k -t -w . --extensions 'node,js,.env,json' index"
+    "dev": "npx supervisor -k -t -w . --extensions 'node,js,.env,json' gateway"
   },
   "repository": {
     "type": "git",
