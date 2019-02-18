@@ -6,6 +6,7 @@ const feathers = require('@feathersjs/feathers');
 const socketio = require('@feathersjs/socketio-client');
 const io = require('socket.io-client');
 const validUrl = require('valid-url');
+const buffer = require('buffer');
 const {
   rxjs,
   of ,
@@ -31,9 +32,10 @@ const db = new Datastore({
   autoload: true
 });
 const version = require('./package.json').version;
-const xbeeDeviceRegex = /^8-/;
-const xbeeDeviceFilter = R.propSatisfies(R.test(xbeeDeviceRegex), 'did');
-const isXBeeDevice = R.compose(R.test(xbeeDeviceRegex), R.prop('did'));
+//const xbeeDeviceRegex = /^8-/;
+//const xbeeDeviceFilter = R.propSatisfies(R.test(xbeeDeviceRegex), 'did');
+//const isXBeeDevice = R.compose(R.test(xbeeDeviceRegex), R.prop('did'));
+const isXBeeDevice = R.compose(R.not(), R.isEmpty(), R.prop('address64'))
 
 const destinationId = '0013A20040B51A26';
 const data = 'TIESTO';
@@ -80,7 +82,8 @@ const isUsbDeviceAnXbee = (filename) => {
     });
 
     maybeAnXbee.localCommand({
-      command: "MY"
+      command: "MY",
+      defaultTimeout: 500
     }).subscribe((res) => {
       console.log(`  👀 Detected XBee at ${filename}`);
       maybeAnXbee.close();
@@ -127,7 +130,64 @@ getUsbDevice().then((filename) => {
   console.log(e);
 });
 
-const timeoutBetweenRssi = 30000;
+const timeoutBetweenRssi = 3000;
+
+const reportRssiToGameserver = (results) => {
+  // {"type":151,"id":3,"remote64":"0013a20040ba4058","remote16":"6771","command":"DB","commandStatus":0,"commandData":{"type":"Buffer","data":[36]}}
+  if (!results) return
+  const rssi = `-${parseInt(results.commandData.toString('hex'), 16)}`
+  const remote64 = results.remote64;
+
+  console.log(`reporting rssi:${rssi}dB, remote64:${remote64}`);
+
+  // lookup the device ID given the address64
+  devices.find({
+    query: {
+      address64: remote64
+    },
+  }).then((d) => {
+    console.log(`found ${JSON.stringify(d)}`);
+    devices.patch(d[0]._id, {
+      rssi: parseInt(rssi)
+    });
+  });
+}
+
+
+
+const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
+console.log(`  🔗 gameServerAddress is ${gameServerAddress}`)
+
+/**
+ * Ensure game server address is defined
+ */
+if (typeof gameServerAddress === 'undefined')
+  throw new Error('D3VICE_GAMESERVER_ADDRESS is undefined in environment!');
+
+
+/**
+ * Ensure game server address is a valid URI
+ */
+if (validUrl.isUri(gameServerAddress)) {
+  console.log(`  ✅ The game server address looks valid.`);
+} else {
+  throw new Error('  ❌ D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. ' +
+    'Example: http://game.doomsquadairsoft.com or http://192.168.1.112')
+}
+
+
+
+const socket = io(gameServerAddress); // @TODO dynamically set this using Bonjour or something
+const app = feathers();
+/**
+ * Set up Socket.io client with the socket to gameServerAddress
+ */
+app.configure(socketio(socket));
+
+// get a handle on the event service
+const evs = app.service('events');
+const devices = app.service('devices');
+const timeline = app.service('timeline');
 
 
 
@@ -160,8 +220,9 @@ const doRunGateway = (xbeeFilename) => {
     )
     .subscribe(
       (x) => {
-        console.log(`nexted. ${JSON.stringify(x)}`)
-        // @TODO report to game server
+        //console.log(`nexted. ${JSON.stringify(x)}`)
+        // @TODO report results to the game server
+        reportRssiToGameserver(x);
       },
       (err) => {
         console.log(`err'd: ${err}`)
@@ -270,40 +331,6 @@ const doRunGateway = (xbeeFilename) => {
 
 
 
-  const gameServerAddress = process.env.D3VICE_GAMESERVER_ADDRESS
-  console.log(`  🔗 gameServerAddress is ${gameServerAddress}`)
-
-  /**
-   * Ensure game server address is defined
-   */
-  if (typeof gameServerAddress === 'undefined')
-    throw new Error('D3VICE_GAMESERVER_ADDRESS is undefined in environment!');
-
-
-  /**
-   * Ensure game server address is a valid URI
-   */
-  if (validUrl.isUri(gameServerAddress)) {
-    console.log(`  ✅ The game server address looks valid.`);
-  } else {
-    throw new Error('  ❌ D3D3VICE_GAMESERVER_ADDRESS is not a valid URL. ' +
-      'Example: http://game.doomsquadairsoft.com or http://192.168.1.112')
-  }
-
-
-
-  const socket = io(gameServerAddress); // @TODO dynamically set this using Bonjour or something
-  const app = feathers();
-
-  /**
-   * Set up Socket.io client with the socket to gameServerAddress
-   */
-  app.configure(socketio(socket));
-
-  // get a handle on the event service
-  const evs = app.service('events');
-
-  const timeline = app.service('timeline');
 
 
   app.on('error', function(err) {
@@ -372,7 +399,7 @@ const doRunGateway = (xbeeFilename) => {
   app.service('devices')
     .find()
     .then(function(devices) {
-      const xbeeDevices = R.filter(xbeeDeviceFilter, devices);
+      const xbeeDevices = R.filter(isXBeeDevice, devices);
       console.log(`  💼 ${chalk.bold.blue(`${xbeeDevices.length} XBEE D3VICE${xbeeDevices.length > 1 ? 'S' : ''}:`)}`);
       console.log(`    ${R.map((d) => `${d.name}(${d.did})`, xbeeDevices)}`);
     })
