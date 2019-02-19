@@ -192,7 +192,7 @@ const reportBattToGameserver = (results) => {
       console.log(chalk.red(`  😨 UH-OH: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
     } else {
       devices.patch(d[0]._id, {
-        batt: parseInt(batt)
+        batt: batt
       });
     }
   });
