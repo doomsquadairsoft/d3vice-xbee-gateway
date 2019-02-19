@@ -20,6 +20,11 @@ const {
   repeat,
   delay,
   catchError,
+  tap,
+  pluck,
+  map,
+  take,
+  takeWhile
 } = require('rxjs/operators');
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
@@ -36,12 +41,23 @@ const version = require('./package.json').version;
 //const xbeeDeviceRegex = /^8-/;
 //const xbeeDeviceFilter = R.propSatisfies(R.test(xbeeDeviceRegex), 'did');
 //const isXBeeDevice = R.compose(R.test(xbeeDeviceRegex), R.prop('did'));
-const isXBeeDevice = R.compose(R.not(), R.isEmpty(), R.prop('address64'))
+const isXBeeDevice = R.compose(R.not(), R.isNil(), R.prop('address64'))
 
 const destinationId = '0013A20040B51A26';
 const data = 'TIESTO';
 // const xbeeUsbDevice = process.env.XBEE_USB_DEVICE;
 
+
+
+const computeVoltage = (number) => {
+  const r1 = 100000;
+  const r2 = 10000;
+  const timePeriod = 1024.0;
+  const baseVoltage = 3.3;
+  const vOut = ((number * baseVoltage) / timePeriod);
+  const vIn = (vOut / (r2/(r1+r2)));
+  return Number(vIn).toFixed(2);
+}
 
 /**
  * getUsbDevice
@@ -131,11 +147,11 @@ getUsbDevice().then((filename) => {
   console.log(e);
 });
 
-const timeoutBetweenRssi = 3000;
+const timeoutBetweenRssi = 7000;
 
 const reportRssiToGameserver = (results) => {
   // {"type":151,"id":3,"remote64":"0013a20040ba4058","remote16":"6771","command":"DB","commandStatus":0,"commandData":{"type":"Buffer","data":[36]}}
-  if (!results) return
+  if (!results) return;
   const rssi = `-${parseInt(results.commandData.toString('hex'), 16)}`
   const remote64 = results.remote64;
 
@@ -148,9 +164,37 @@ const reportRssiToGameserver = (results) => {
     },
   }).then((d) => {
     console.log(`found ${JSON.stringify(d)}`);
-    devices.patch(d[0]._id, {
-      rssi: parseInt(rssi)
-    });
+    if (R.isEmpty(d)) {
+      console.log(chalk.red(`  👻 ERROR: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
+    } else {
+      devices.patch(d[0]._id, {
+        rssi: parseInt(rssi)
+      });
+    }
+  });
+}
+
+const reportBattToGameserver = (results) => {
+  if (!results) return;
+  const batt = results.batt;
+  const remote64 = results.remote64;
+
+  console.log(`reporting batt:${batt}, remote64:${remote64}`);
+
+  // lookup the device ID given the address64
+  devices.find({
+    query: {
+      address64: remote64
+    },
+  }).then((d) => {
+    console.log(`found ${JSON.stringify(d)}`);
+    if (R.isEmpty(d)) {
+      console.log(chalk.red(`  😨 UH-OH: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
+    } else {
+      devices.patch(d[0]._id, {
+        batt: parseInt(batt)
+      });
+    }
   });
 }
 
@@ -202,13 +246,29 @@ const doRunGateway = (xbeeFilename) => {
     module: "ZigBee",
     api_mode: 2,
     debug: true
-  });
+  })
 
 
+  // Get the RSSI from remote XBees by sending the DB command.
+  // we get the response right away and we can forward it to DooM HQ (gameserver)
   const rssiRequester = xbee.remoteCommand({
     destinationId: undefined,
     broadcast: true,
     command: 'DB'
+  })
+  .pipe(
+    tap(ev => {
+      console.log(`  🍶📻 tap RSSI: ${JSON.stringify(ev)}`);
+      reportRssiToGameserver(ev);
+    })
+  )
+
+  // request battery voltage
+  // the response for this is handled below
+  const battRequester = xbee.remoteTransmit({
+    destinationId: undefined,
+    broadcast: true,
+    data: 'DCXDC'
   })
   //
   // const errorCatcher = (val) => {
@@ -223,7 +283,7 @@ const doRunGateway = (xbeeFilename) => {
   const delayer = of(null).pipe(delay(timeoutBetweenRssi));
 
   const transmissionLoop = concat(
-      delayer, rssiRequester
+      delayer, rssiRequester, delayer, battRequester
     )
     .pipe(
       repeat(),
@@ -234,15 +294,13 @@ const doRunGateway = (xbeeFilename) => {
     )
     .subscribe(
       (x) => {
-        //console.log(`nexted. ${JSON.stringify(x)}`)
-        // @TODO report results to the game server
-        reportRssiToGameserver(x);
+        console.log(`  🌀 nexted. ${JSON.stringify(x)}`)
       },
       (err) => {
-        console.log(`err'd: ${err}`)
+        console.log(`  😠 err'd: ${err}`)
       },
       () => {
-        console.log(`completo.`)
+        console.log(`  ⌛ completo.`)
       }
     )
 
@@ -297,17 +355,46 @@ const doRunGateway = (xbeeFilename) => {
    * configure a stream for handling HELLOs from controlpoints
    * the HELLO packet type is within type 144 (0x90) ZIGBEE_RECEIVE_PACKET
    */
-  // const helloStream = xbee
-  //   .monitorTransmissions()
-  //   .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
-  //   .where(R.prop("data"))
-  //   .where(function(frame) {
-  //     return R.test(/DCXHI/, frame.data.toString());
-  //   })
-  //   .map(frame => [
-  //     frame.remote64,
-  //     frame.data.toString(),
-  //   ])
+  const incomingTransmissionStream = xbee
+    .monitorTransmissions()
+    .pipe(
+      takeWhile((data) => data.type === 144), // ZIGBEE_RECEIVE_PACKET
+      takeWhile((data) => R.test(/^DCXDC/, data.data.toString())),
+      tap((data) => { console.log(`  🤠 ${JSON.stringify(data)}`)}),
+      map((data) => {
+        const numberBuffer = data.data.slice(5, 6);
+        const number = parseInt(numberBuffer.toString('hex'), 16);
+        return {
+          voltage: computeVoltage(number),
+          remote64: data.remote64
+        };
+      }),
+      tap((data) => {
+        console.log(`  🔌 *bzzzt* ${JSON.stringify(data)}`);
+        reportBattToGameserver(data);
+      }),
+      repeat(),
+      catchError((err, caught) => {
+        console.error(`${chalk.red(`  🧧 there was an error while receiving battery voltage info!`)} ${chalk.red.bold(`${err}.`)} ${chalk.yellow(`Head for the hills~ JK,　DO YOUR BEST!「頑張って！」`)}`);
+        return caught;
+      })
+    )
+    .subscribe((next) => {
+      console.log(`  🌙 to the moon! ${JSON.stringify(next)}`)
+    }, (err) => {
+      console.log(`  ${chalk.bold('👺 間違いだ')} ${err}`);
+    }, () => {
+      console.log(`  🙆‍ completod! `)
+    })
+    // .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
+    // .where(R.prop("data"))
+    // .where(function(frame) {
+    //   return R.test(/DCXHI/, frame.data.toString());
+    // })
+    // .map(frame => [
+    //   frame.remote64,
+    //   frame.data.toString(),
+    // ])
 
 
 
@@ -415,7 +502,7 @@ const doRunGateway = (xbeeFilename) => {
     .then(function(devices) {
       const xbeeDevices = R.filter(isXBeeDevice, devices);
       console.log(`  💼 ${chalk.bold.blue(`${xbeeDevices.length} XBEE D3VICE${xbeeDevices.length > 1 ? 'S' : ''}:`)}`);
-      console.log(`    ${R.map((d) => `${d.name}(${d.did})`, xbeeDevices)}`);
+      console.log(`    ${R.map((d) => `👜 ${d.did}(${d.description ? d.description : d._id })`, xbeeDevices)}`);
     })
     .catch((e) => {
       console.error(`  ⚠️ ${chalk.red("WARNING: Gateway had a problem connecting to the game server!")}`);
@@ -425,12 +512,12 @@ const doRunGateway = (xbeeFilename) => {
 
 
   // When an event is received from the xbee network, translate the data
-  // and forward to the gameserver.
+  // // and forward to the gameserver.
   // helloStream
   //   // .takeUntil(ctrlCStream)
   //   .subscribe(function(s) {
   //     console.log(`  🚿 helloStream: ${s}`);
-  //     forwardEventToGameserver(s);
+  //     // forwardEventToGameserver(s);
   //   }, errorCb, exitCb);
 
   //rxjs.Observable.combineLatest(Promise.resolve())
