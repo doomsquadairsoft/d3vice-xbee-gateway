@@ -187,7 +187,7 @@ const reportBattToGameserver = (results) => {
       address64: remote64
     },
   }).then((d) => {
-    console.log(`found ${JSON.stringify(d)}`);
+    console.log(`  🔍 found ${JSON.stringify(d)}`);
     if (R.isEmpty(d)) {
       console.log(chalk.red(`  😨 UH-OH: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
     } else {
@@ -365,7 +365,7 @@ const doRunGateway = (xbeeFilename) => {
         const numberBuffer = data.data.slice(5, 6);
         const number = parseInt(numberBuffer.toString('hex'), 16);
         return {
-          voltage: computeVoltage(number),
+          batt: computeVoltage(number),
           remote64: data.remote64
         };
       }),
