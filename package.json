@@ -1,6 +1,6 @@
 {
   "name": "d3vice-xbee-gateway",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Use XBee based wireless DooM D3vices with https://github.com/doomsquadairsoft/controlpointer",
   "main": "index.js",
   "scripts": {
