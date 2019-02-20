@@ -9,7 +9,7 @@ const validUrl = require('valid-url');
 const buffer = require('buffer');
 const {
   rxjs,
-  of ,
+  of,
   interval,
   Observable,
   concat
@@ -26,6 +26,7 @@ const {
   take,
   takeWhile
 } = require('rxjs/operators');
+const moment = require('moment');
 const xbeeRx = require("xbee-rx");
 const R = require("ramda");
 const xbee_api = require("xbee-api");
@@ -147,7 +148,7 @@ getUsbDevice().then((filename) => {
   console.log(e);
 });
 
-const timeoutBetweenRssi = 7000;
+const timeoutBetweenRssi = moment.duration(30, 'seconds').valueOf();
 
 const reportRssiToGameserver = (results) => {
   // {"type":151,"id":3,"remote64":"0013a20040ba4058","remote16":"6771","command":"DB","commandStatus":0,"commandData":{"type":"Buffer","data":[36]}}
@@ -168,7 +169,8 @@ const reportRssiToGameserver = (results) => {
       console.log(chalk.red(`  👻 ERROR: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
     } else {
       devices.patch(d[0]._id, {
-        rssi: parseInt(rssi)
+        rssi: parseInt(rssi),
+        xbeeUpdatedAt: moment().valueOf()
       });
     }
   });
@@ -192,7 +194,8 @@ const reportBattToGameserver = (results) => {
       console.log(chalk.red(`  😨 UH-OH: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
     } else {
       devices.patch(d[0]._id, {
-        batt: batt
+        batt: batt,
+        xbeeUpdatedAt: moment().valueOf()
       });
     }
   });
