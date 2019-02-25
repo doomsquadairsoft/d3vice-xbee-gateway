@@ -39,15 +39,14 @@ const db = new Datastore({
   autoload: true
 });
 const version = require('./package.json').version;
-//const xbeeDeviceRegex = /^8-/;
-//const xbeeDeviceFilter = R.propSatisfies(R.test(xbeeDeviceRegex), 'did');
-//const isXBeeDevice = R.compose(R.test(xbeeDeviceRegex), R.prop('did'));
-const isXBeeDevice = R.compose(R.not(), R.isNil(), R.prop('address64'))
+const isXBeeDevice = R.propSatisfies(x => R.length(x) > 0, 'address64');
 
-const destinationId = '0013A20040B51A26';
-const data = 'TIESTO';
-// const xbeeUsbDevice = process.env.XBEE_USB_DEVICE;
-
+Promise.config({
+  longStackTraces: true,
+  warnings: true,
+  cancellation: true,
+  monitoring: true,
+})
 
 
 const computeVoltage = (number) => {
@@ -104,16 +103,17 @@ const isUsbDeviceAnXbee = (filename) => {
       defaultTimeout: 500
     }).subscribe((res) => {
       console.log(`  👀 Detected XBee at ${filename}`);
-      maybeAnXbee.close();
       resolve(true);
     }, (e) => {
       console.log(`  😕 Detected ${filename} but it doesn't look like an XBee.`);
-      //console.error(e);
-      maybeAnXbee.close();
       resolve(false);
+    }, () => {
+      console.log('  🚪 closing test connection to XBee');
+      maybeAnXbee.close();
     })
   });
 }
+
 
 const forwardEventToGameserver = (streamData) => {
   const did = streamData[0];
@@ -140,10 +140,10 @@ const doShowIntro = () => {
 // find the /dev/ttyUSBn device that is an XBee.
 doShowIntro();
 
-getUsbDevice().then((filename) => {
+getUsbDevice().delay(500).then((filename) => {
   if (typeof filename === 'undefined') throw new Error('No valid USB XBee radios found.')
   console.log(`  🎯 ${chalk.bold.green(filename)} is our XBee.`);
-  doRunGateway(filename);
+  return doRunGateway(filename);
 }).catch(function(e) {
   console.log(e);
 });
@@ -163,7 +163,8 @@ const reportRssiToGameserver = (results) => {
     query: {
       address64: remote64
     },
-  }).then((d) => {
+  })
+  .then((d) => {
     console.log(`found ${JSON.stringify(d)}`);
     if (R.isEmpty(d)) {
       console.log(chalk.red(`  👻 ERROR: There is no D3VICE in DooM HQ with address64 ${remote64}!!`));
@@ -173,7 +174,11 @@ const reportRssiToGameserver = (results) => {
         xbeeUpdatedAt: moment().valueOf()
       });
     }
-  });
+  })
+  .catch((e) => {
+    console.log(`there was a problem finding the device in question with address64 ${remote64}`)
+    console.log(e);
+  })
 }
 
 const reportBattToGameserver = (results) => {
@@ -273,15 +278,7 @@ const doRunGateway = (xbeeFilename) => {
     broadcast: true,
     data: 'DCXDC'
   })
-  //
-  // const errorCatcher = (val) => {
-  //   try {
-  //     return rssiRequester;
-  //   }
-  //   catch (err) {
-  //     return Rx.Observable.empty();
-  //   }
-  // };
+
 
   const delayer = of(null).pipe(delay(timeoutBetweenRssi));
 
@@ -307,52 +304,6 @@ const doRunGateway = (xbeeFilename) => {
       }
     )
 
-
-  // var source = rxjs.Observable.timer(0, 5000)
-  //   .timeInterval()
-  //   xbee.remoteCommand({
-  //     destinationId: '8-switzerland-robust',
-  //     command: 'DB',
-  //   }).subscribe((frame) => {
-  //     console.log(`DB response: ${frame.commandData}`);
-  //   }, (e) => {
-  //     console.log(`command failed: ${e}`);
-  //   })
-  //   .repeat();
-  //
-  // var subscription = source.subscribe(
-  //   function(x) {
-  //     console.log('Next: ' + x);
-  //   },
-  //   function(err) {
-  //     console.log('Error: ' + err);
-  //   },
-  //   function() {
-  //     console.log('Completed');
-  //   });
-
-
-  // get RSSI every so often
-
-  // .pipe(
-  //   operators.interval(5000),
-  //   operators.timeInterval(),
-  //   operators.take(3)
-  // );
-
-  //rssiStream
-
-
-  /**
-   * define the sequence of data that is a Ctrl+C
-   * we use this later to determine when to stop listening
-   * to the serial port
-   */
-  // var ctrlCStream = rxjs.Observable.fromEvent(stdin, "data")
-  //   .where(function monitorCtrlCOnData(data) {
-  //     return data.length === 1 && data[0] === 0x03; // Ctrl+C
-  //   })
-  //   .take(1);
 
   /**
    * configure a stream for handling HELLOs from controlpoints
@@ -389,31 +340,6 @@ const doRunGateway = (xbeeFilename) => {
     }, () => {
       console.log(`  🙆‍ completod! `)
     })
-    // .where(R.propEq("type", 144)) // ZIGBEE_RECEIVE_PACKET
-    // .where(R.prop("data"))
-    // .where(function(frame) {
-    //   return R.test(/DCXHI/, frame.data.toString());
-    // })
-    // .map(frame => [
-    //   frame.remote64,
-    //   frame.data.toString(),
-    // ])
-
-
-
-
-
-  //.where(R.test(/DCXHI/))
-  //.where(R.is(String), [0])
-
-  // .pluck("data")
-  // .map(function (buffer) {
-  //     var s = buffer.toString();
-  //     return (s === "\r") ? "\n" : s;
-  // })
-  // .where(R.is(String))
-  // .where(R.test(/DCXHI/));
-
 
 
 
@@ -432,11 +358,6 @@ const doRunGateway = (xbeeFilename) => {
 
 
 
-
-
-
-
-
   app.on('error', function(err) {
     console.error('an error occured.');
     console.error(err);
@@ -450,8 +371,6 @@ const doRunGateway = (xbeeFilename) => {
     const order = event.order || '';
 
     console.log(`  >> event seen.\n     type=${type} device=${device} order=${order}`);
-    //device = Buffer.from(device, 'hex');
-
 
     if (type === 'order') {
       xbee.remoteTransmit({
@@ -513,15 +432,4 @@ const doRunGateway = (xbeeFilename) => {
     })
 
 
-
-  // When an event is received from the xbee network, translate the data
-  // // and forward to the gameserver.
-  // helloStream
-  //   // .takeUntil(ctrlCStream)
-  //   .subscribe(function(s) {
-  //     console.log(`  🚿 helloStream: ${s}`);
-  //     // forwardEventToGameserver(s);
-  //   }, errorCb, exitCb);
-
-  //rxjs.Observable.combineLatest(Promise.resolve())
 }
