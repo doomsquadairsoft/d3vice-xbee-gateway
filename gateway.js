@@ -265,7 +265,8 @@ const buildLEDCommand = (device) => {
   console.log(device);
   const teamNumber = (device.bluProgress > 0) ? 1 : 0;
   const percentage = (device.bluProgress > 0) ? device.bluProgress : device.redProgress;
-  return `DCXLED${teamNumber}${percentage}`;
+  const percentageHex = percentage.toString(16);
+  return `DCXLED${teamNumber}${percentageHex}`;
 };
 
 
