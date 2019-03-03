@@ -264,9 +264,15 @@ const reportBattToGameserver = (results) => {
 const buildLEDCommand = (device) => {
   console.log(device);
   const teamNumber = (device.bluProgress > 0) ? 1 : 0;
-  const percentage = (device.bluProgress > 0) ? device.bluProgress : device.redProgress;
-  const percentageHex = percentage.toString(16);
-  return `DCXLED${teamNumber}${percentageHex}`;
+  const percentage = (teamNumber === 1) ? device.bluProgress : device.redProgress;
+  const packet = Buffer.alloc(10); // create packet buffer
+  console.log(`  percentage:${percentage}`);
+  packet.write('DCXLED');
+  packet.writeInt8(teamNumber, 6); // add team number to buffer
+  packet.writeInt8(percentage, 7);
+  const pString = packet.toString();
+  console.log(`  pString:${pString}`)
+  return pString;
 };
 
 
