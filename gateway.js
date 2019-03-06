@@ -42,6 +42,8 @@ const db = new Datastore({
 });
 const version = require('./package.json').version;
 const isXBeeDevice = R.propSatisfies(x => R.length(x) > 0, 'address64');
+const isDeviceRedProgress = R.propSatisfies(x => (x > 0), 'redProgress');
+const isDeviceBluProgress = R.propSatisfies(x => (x > 0), 'bluProgress');
 
 
 Promise.config({
@@ -220,6 +222,20 @@ const reportRssiToGameserver = (results) => {
     })
 }
 
+const sendLEDStatus = (xbeeInstance, device) => {
+  console.log(`  🎵 sending LED status. device:${JSON.stringify(device)} address64:${device.address64}`)
+  xbeeInstance.remoteTransmit({
+      destination64: device.address64,
+      broadcast: false,
+      data: buildLEDCommand(device)
+    })
+    .subscribe(function xbeeTXSuccess() {
+      console.log("Device order transmission successful~");
+    }, function xbeeTXFail(e) {
+      console.log("Device order transmission failed:\n", e);
+    });
+}
+
 const sendGoToPhaseCommand = (xbeeInstance, address64, phaseNumber) => {
   if (typeof xbeeInstance === 'undefined') throw new Error('first param sent to sendGoToPhaseCommand must be an xbee-rx instance. got undefined.');
   if (typeof address64 === 'undefined') throw new Error('second param sent to sendGoToPhaseCommand must be an address64. got undefined.');
@@ -266,10 +282,10 @@ const buildLEDCommand = (device) => {
   const teamNumber = (device.bluProgress > 0) ? 1 : 0;
   const percentage = (teamNumber === 1) ? device.bluProgress : device.redProgress;
   const packet = Buffer.alloc(10); // create packet buffer
-  console.log(`  percentage:${percentage}`);
+  console.log(`  percentage:${percentage} teamNumber:${teamNumber}`);
   packet.write('DCXLED');
   packet.writeInt8(teamNumber, 6); // add team number to buffer
-  packet.writeInt8(percentage, 7);
+  packet.writeInt8(percentage, 7); // add percentage to buffer
   const pString = packet.toString();
   console.log(`  pString:${pString}`)
   return pString;
@@ -438,6 +454,18 @@ const doRunGateway = (xbeeFilename) => {
     // Send D3VICE 2B into Phase 25
     // @TODO this behavior should be configurable in DooM HQ
     sendGoToPhaseCommand(xbee, next.remote64, 25);
+    devices.find({
+        query: {
+          address64: next.remote64
+        },
+      })
+      .then((d) => {
+        sendLEDStatus(xbee, d[0]);
+      })
+      .catch((e) => {
+        console.log(`  🏜️❌ there was a problem finding the device in question with address64 ${remote64}`)
+        console.log(e);
+      });
   })
 
 
@@ -539,16 +567,7 @@ const doRunGateway = (xbeeFilename) => {
         console.log(`  👀 device ${device.did} has patched`)
         console.log(`  👀 device: ${JSON.stringify(device)}`)
         // send out an update to the remote xbee device
-        xbee.remoteTransmit({
-            destination64: device.address64,
-            broadcast: false,
-            data: buildLEDCommand(device)
-          })
-          .subscribe(function xbeeTXSuccess() {
-            console.log("Device order transmission successful~");
-          }, function xbeeTXFail(e) {
-            console.log("Device order transmission failed:\n", e);
-          });
+        sendLEDStatus(xbee, device);
       }
     })
     .on('removed', function(device) {
