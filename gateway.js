@@ -9,7 +9,7 @@ const validUrl = require('valid-url');
 const buffer = require('buffer');
 const {
   rxjs,
-  of ,
+  of,
   interval,
   Observable,
   concat
@@ -36,10 +36,6 @@ const chalk = require('chalk');
 const fs = require('fs');
 const Promise = require('bluebird');
 const Datastore = require('nedb')
-const db = new Datastore({
-  filename: './data/devices.nedb',
-  autoload: true
-});
 const version = require('./package.json').version;
 const isXBeeDevice = R.propSatisfies(x => R.length(x) > 0, 'address64');
 const isDeviceRedProgress = R.propSatisfies(x => (x > 0), 'redProgress');
